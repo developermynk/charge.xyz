@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# turbo
+.turbo/
+
+# package build output
+dist/
+
+# pnpm
+.pnpm-store/
+
+# Local env example must never be committed with real values
+apps/web/.env.example

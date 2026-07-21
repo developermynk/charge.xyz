@@ -1,0 +1,103 @@
+
+> charge-xyz@1.0.0 dev /home/mayank/charge.xyz
+> turbo run dev --parallel
+
+ WARNING  --parallel is deprecated and will be removed in a future major version. Instead, define task behavior in your turbo.json task definitions using `persistent` and `with`.
+• turbo 2.10.5
+
+   • Packages in scope: @repo/contracts, @repo/hooks, @repo/infra, @repo/sdk, @repo/types, @repo/ui, @repo/utils, web
+   • Running dev in 8 packages
+   • Remote caching disabled
+
+web:dev: cache bypass, force executing d057e1e9911ac26a
+web:dev: 
+web:dev: > web@1.0.0 dev /home/mayank/charge.xyz/apps/web
+web:dev: > next dev
+web:dev: 
+web:dev: ▲ Next.js 16.2.0 (Turbopack)
+web:dev: - Local:         http://localhost:3000
+web:dev: - Network:       http://192.168.29.22:3000
+web:dev: - Environments: .env.local
+web:dev: ✓ Ready in 415ms
+web:dev: 
+web:dev:  GET / 200 in 1529ms (next.js: 306ms, application-code: 1224ms)
+web:dev:  GET /dashboard/swap 200 in 291ms (next.js: 102ms, application-code: 189ms)
+web:dev:  GET /dashboard/bridge 200 in 206ms (next.js: 35ms, application-code: 171ms)
+web:dev:  GET /api/swap/config 200 in 107ms (next.js: 91ms, application-code: 16ms)
+web:dev:  GET /api/swap/key 200 in 34ms (next.js: 29ms, application-code: 4ms)
+web:dev:  GET /dashboard/bridge 200 in 141ms (next.js: 10ms, application-code: 131ms)
+web:dev:  HEAD /dashboard/bridge 200 in 89ms (next.js: 5ms, application-code: 85ms)
+web:dev:  HEAD /dashboard/bridge 200 in 119ms (next.js: 23ms, application-code: 96ms)
+web:dev:  HEAD /dashboard/bridge 200 in 69ms (next.js: 5ms, application-code: 64ms)
+web:dev:  GET /dashboard/bridge 200 in 21ms (next.js: 7ms, application-code: 14ms)
+web:dev:  GET /dashboard/bridge 200 in 32ms (next.js: 5ms, application-code: 27ms)
+web:dev:  GET /dashboard/swap 200 in 74ms (next.js: 13ms, application-code: 61ms)
+web:dev:  GET /api/swap/config 200 in 13ms (next.js: 5ms, application-code: 8ms)
+web:dev:  GET /api/swap/key 200 in 8ms (next.js: 3ms, application-code: 4ms)
+web:dev:  GET /api/swap/config 200 in 8ms (next.js: 4ms, application-code: 4ms)
+web:dev:  GET /api/swap/key 200 in 13ms (next.js: 9ms, application-code: 4ms)
+web:dev:  GET /dashboard/bridge 200 in 108ms (next.js: 18ms, application-code: 89ms)
+web:dev:  GET /dashboard/bridge 200 in 171ms (next.js: 18ms, application-code: 154ms)
+web:dev:  HEAD /dashboard/bridge 200 in 113ms (next.js: 3ms, application-code: 109ms)
+web:dev:  HEAD /dashboard/bridge 200 in 111ms (next.js: 9ms, application-code: 102ms)
+web:dev:  HEAD /dashboard/bridge 200 in 70ms (next.js: 7ms, application-code: 63ms)
+web:dev:  GET / 200 in 189ms (next.js: 46ms, application-code: 143ms)
+web:dev:  GET /dashboard 200 in 131ms (next.js: 80ms, application-code: 51ms)
+web:dev:  GET /dashboard/swap 200 in 69ms (next.js: 7ms, application-code: 62ms)
+web:dev:  GET /dashboard/swap 200 in 36ms (next.js: 4ms, application-code: 32ms)
+web:dev:  GET /api/swap/config 200 in 13ms (next.js: 5ms, application-code: 8ms)
+web:dev:  GET /api/swap/key 200 in 17ms (next.js: 13ms, application-code: 4ms)
+web:dev:  GET /api/swap/config 200 in 8ms (next.js: 4ms, application-code: 4ms)
+web:dev:  GET /api/swap/key 200 in 14ms (next.js: 10ms, application-code: 4ms)
+web:dev:  POST /api/swap/quote 200 in 2.5s (next.js: 625ms, application-code: 1878ms)
+web:dev:  GET /dashboard/swap 200 in 45ms (next.js: 8ms, application-code: 37ms)
+web:dev:  GET /dashboard/bridge 200 in 100ms (next.js: 12ms, application-code: 88ms)
+web:dev:  GET /dashboard/bridge 200 in 170ms (next.js: 21ms, application-code: 148ms)
+web:dev:  HEAD /dashboard/bridge 200 in 90ms (next.js: 6ms, application-code: 84ms)
+web:dev:  HEAD /dashboard/bridge 200 in 106ms (next.js: 10ms, application-code: 96ms)
+web:dev:  HEAD /dashboard/bridge 200 in 67ms (next.js: 4ms, application-code: 63ms)
+web:dev:  GET /dashboard/bridge 200 in 91ms (next.js: 7ms, application-code: 85ms)
+web:dev:  HEAD /dashboard/bridge 200 in 69ms (next.js: 5ms, application-code: 65ms)
+web:dev:  HEAD /dashboard/bridge 200 in 73ms (next.js: 9ms, application-code: 64ms)
+web:dev:  HEAD /dashboard/bridge 200 in 59ms (next.js: 4ms, application-code: 55ms)
+web:dev: ✓ Compiled in 1912ms
+web:dev: ✓ Compiled in 136ms
+web:dev:   Reload env: .env.local
+web:dev: ✓ Compiled in 311ms
+web:dev:  GET /dashboard/bridge 200 in 347ms (next.js: 262ms, application-code: 85ms)
+web:dev: [browser] Cannot update a component (`WalletProvider`) while rendering a different component (`Hydrate`). To locate the bad setState() call inside `Hydrate`, follow the stack trace as described in https://react.dev/link/setstate-in-render 
+web:dev:     at Set.forEach (<anonymous>) (<anonymous>)
+web:dev:  GET /dashboard/bridge 200 in 1328ms (next.js: 7ms, application-code: 1322ms)
+web:dev:  HEAD /dashboard/bridge 200 in 75ms (next.js: 5ms, application-code: 70ms)
+web:dev: [browser] Analytics SDK: TypeError: Failed to fetch
+web:dev:     at _t (<anonymous>:1:64025)
+web:dev:     at <unknown> (<anonymous>:1:68106) { context: [32m'AnalyticsSDKApiError'[39m } (<anonymous>:1:49889)
+web:dev: [browser] Error generating app config:  TypeError: Failed to fetch
+web:dev: [browser] Analytics SDK: TypeError: Failed to fetch
+web:dev:     at _t (<anonymous>:1:64025)
+web:dev:     at <unknown> (<anonymous>:1:68106) { context: [32m'AnalyticsSDKApiError'[39m } (<anonymous>:1:49889)
+web:dev: [browser] Analytics SDK: TypeError: Failed to fetch
+web:dev:     at _t (<anonymous>:1:64025)
+web:dev:     at <unknown> (<anonymous>:1:68106) { context: [32m'AnalyticsSDKApiError'[39m } (<anonymous>:1:49889)
+web:dev:  GET /dashboard/swap 200 in 97ms (next.js: 27ms, application-code: 70ms)
+web:dev:  GET /api/swap/config 200 in 112ms (next.js: 88ms, application-code: 24ms)
+web:dev:  GET /api/swap/key 200 in 52ms (next.js: 44ms, application-code: 7ms)
+web:dev:  GET /api/swap/config 200 in 11ms (next.js: 5ms, application-code: 6ms)
+web:dev:  GET /api/swap/key 200 in 7ms (next.js: 2ms, application-code: 5ms)
+web:dev:  POST /api/swap/quote 500 in 1301ms (next.js: 841ms, application-code: 460ms)
+web:dev:  GET /dashboard/bridge 200 in 39ms (next.js: 6ms, application-code: 32ms)
+web:dev:  GET /dashboard/launch 200 in 88ms (next.js: 48ms, application-code: 40ms)
+web:dev:  GET /dashboard/transfer 200 in 88ms (next.js: 47ms, application-code: 41ms)
+web:dev:  GET /dashboard/launch 200 in 49ms (next.js: 8ms, application-code: 41ms)
+web:dev:  GET /dashboard/bridge 200 in 31ms (next.js: 5ms, application-code: 26ms)
+ ELIFECYCLE  Command failed.
+web:dev:  ELIFECYCLE  Command failed.
+Shutting down Turborepo tasks...
+web#dev:  ERROR  command (/home/mayank/charge.xyz/apps/web) /home/mayank/.nvm/versions/node/v20.20.2/bin/pnpm run dev exited (137)
+
+ Tasks:    0 successful, 1 total
+Cached:    0 cached, 1 total
+  Time:    38m0.632s 
+Failed:    web#dev
+
+ ERROR  run failed: command  exited (137)

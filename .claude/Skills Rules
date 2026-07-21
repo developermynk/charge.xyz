@@ -1,0 +1,51 @@
+# Skill Usage
+
+Before implementation:
+
+Check whether an existing skill solves the task.
+
+If yes:
+
+Use the skill.
+
+Do not reimplement.
+
+---
+
+If multiple skills exist:
+
+Choose the most specialized.
+
+---
+
+Never ignore an available skill.
+
+---
+
+If a skill provides best practices:
+
+Follow them exactly.
+
+---
+
+Use skills for:
+
+React
+
+Next.js
+
+Tailwind
+
+Circle
+
+Privy
+
+Solidity
+
+Testing
+
+Deployment
+
+Performance
+
+Accessibility

@@ -1,0 +1,24 @@
+{
+  "name": "@repo/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "hardhat compile",
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.ts --network arcTestnet",
+    "test": "hardhat test",
+    "reset": "node --no-warnings --experimental-strip-types scripts/reset-markets.ts"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.6",
+    "@uma/core": "^2.62.2"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@types/node": "^20",
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.22.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5"
+  }
+}
