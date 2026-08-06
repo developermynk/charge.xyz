@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import * as React from "react";
+import { createPortal } from "react-dom";
 
 import { cn } from "./cn.ts";
 
@@ -30,6 +31,19 @@ export function Modal({
   const panelRef = React.useRef<HTMLDivElement>(null);
   const restoreRef = React.useRef<HTMLElement | null>(null);
 
+  /*
+    Render into document.body via a portal.
+
+    A `fixed` overlay is NOT enough on its own: any ancestor with
+    backdrop-filter, filter, transform or contain creates a containing block
+    AND a stacking context, which traps the overlay inside its parent's
+    z-order. Our glass Cards use backdrop-blur, so a modal opened from inside
+    one was being painted UNDER the card that opened it. Portalling to body
+    escapes every ancestor stacking context for good.
+  */
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+
   React.useEffect(() => {
     if (!open) return;
 
@@ -54,10 +68,10 @@ export function Modal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onClose}
@@ -96,6 +110,7 @@ export function Modal({
         </div>
         <div className="px-6 pb-6 pt-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -61,23 +61,46 @@ export function AppSidebar() {
 
       <div className="space-y-3 border-t border-white/[0.08] pt-4">
         <div className="px-2">
-          <p className="text-xs text-fg-tertiary">
-            {method === "email" ? "Signed in with email" : "Connected wallet"}
-          </p>
-          <p className="mt-0.5 font-mono text-sm text-fg">
-            {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "—"}
-          </p>
+          {address ? (
+            <>
+              <p className="text-xs text-fg-tertiary">
+                {method === "email" ? "Signed in with email" : "Connected wallet"}
+              </p>
+              <p className="mt-0.5 font-mono text-sm text-fg">
+                {`${address.slice(0, 6)}…${address.slice(-4)}`}
+              </p>
+            </>
+          ) : (
+            /*
+              An em-dash reads as "empty", not as "disconnected". Say the state
+              in words and pair it with a status dot so it is legible at a
+              glance and to a screen reader.
+            */
+            <>
+              <p className="text-xs text-fg-tertiary">Wallet</p>
+              <p className="mt-0.5 flex items-center gap-1.5 text-sm text-fg-secondary">
+                <span
+                  className="size-1.5 shrink-0 rounded-full bg-fg-tertiary"
+                  aria-hidden
+                />
+                Not connected
+              </p>
+            </>
+          )}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          block
-          onClick={() => void disconnect()}
-          className="justify-start"
-        >
-          <LogOut className="size-4" aria-hidden />
-          Sign out
-        </Button>
+        {/* Only offer sign-out when there is a session to end. */}
+        {address && (
+          <Button
+            variant="ghost"
+            size="sm"
+            block
+            onClick={() => void disconnect()}
+            className="justify-start"
+          >
+            <LogOut className="size-4" aria-hidden />
+            Sign out
+          </Button>
+        )}
       </div>
     </aside>
   );

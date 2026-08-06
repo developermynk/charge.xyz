@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/*
+  Scan the workspace UI packages for class names.
+
+  Tailwind v4 auto-detects sources relative to the CSS file, but its crawl does
+  NOT follow into sibling workspace packages under node_modules symlinks. Our
+  shared components (Modal, Button, Card...) live in packages/ui, so without
+  these @source lines their utilities are never generated: the markup ships
+  with `bg-panel/95` on it and no matching rule, and the component renders
+  fully transparent. That is a silent, build-passing visual break — the modal
+  looked like it was "overlapping" the page behind it when in fact it simply
+  had no background.
+*/
+@source "../../../packages/ui/src";
+@source "../../../packages/web3/src";
+
 /**
  * Charge.xyz theme — OLED glassmorphism.
  *

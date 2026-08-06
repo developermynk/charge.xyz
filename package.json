@@ -14,8 +14,9 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "check:secrets": "node scripts/check-client-secrets.mjs",
+    "check:css": "node scripts/check-shared-css.mjs",
     "check:singletons": "node scripts/check-singletons.mjs",
-    "verify": "pnpm check:singletons && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm check:secrets"
+    "verify": "pnpm check:singletons && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm check:secrets && pnpm check:css"
   },
   "devDependencies": {
     "turbo": "^2.5.0",
