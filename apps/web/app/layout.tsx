@@ -1,61 +1,78 @@
-/**
- * Copyright 2026 Circle Internet Group, Inc.  All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 
-import type { Metadata } from "next";
-import { Rajdhani, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const rajdhani = Rajdhani({
-  variable: "--font-rajdhani",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  display: "swap",
-});
-
-const inter = Inter({
-  variable: "--font-inter",
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Charge.xyz — DeFi at Full Charge",
+  metadataBase: new URL("https://charge.xyz"),
+  title: {
+    default: "Charge.xyz — DeFi at full charge on Arc",
+    template: "%s · Charge.xyz",
+  },
   description:
-    "Swap, bridge, and deploy tokens across every major chain with institutional-grade speed and zero compromise on security.",
+    "The USDC-native control panel for Arc. Swap, bridge, launch tokens and send funds on the chain where USDC is the gas. Sign in with email — no wallet required.",
+  keywords: [
+    "Arc",
+    "Circle",
+    "USDC",
+    "stablecoin",
+    "DeFi",
+    "swap",
+    "CCTP bridge",
+    "token launcher",
+  ],
+  openGraph: {
+    title: "Charge.xyz — DeFi at full charge on Arc",
+    description:
+      "Swap, bridge, launch and send USDC on Arc, where your money is also your gas.",
+    url: "https://charge.xyz",
+    siteName: "Charge.xyz",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Charge.xyz — DeFi at full charge on Arc",
+    description:
+      "Swap, bridge, launch and send USDC on Arc, where your money is also your gas.",
+  },
+  robots: { index: true, follow: true },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#08090C",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${rajdhani.variable} ${inter.variable} ${jetbrains.variable} h-full antialiased dark`}
-    >
-      <body className="min-h-full bg-charge-bg font-body text-ink">
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} min-h-dvh bg-base font-sans text-fg antialiased`}
+      >
+        {/* Skip link — keyboard users should not have to tab the whole nav. */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-charge focus:px-4 focus:py-2 focus:font-medium focus:text-black"
+        >
+          Skip to content
+        </a>
         <Providers>{children}</Providers>
       </body>
     </html>

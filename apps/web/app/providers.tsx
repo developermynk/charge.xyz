@@ -1,66 +1,87 @@
-/**
- * Copyright 2026 Circle Internet Group, Inc.  All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 "use client";
 
-import { type ReactNode, useState } from "react";
-import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PrivyProvider } from "@privy-io/react-auth";
-import { config, arcTestnet } from "@repo/hooks/wagmi";
-import { WalletProvider } from "@repo/hooks/WalletContext";
-import { PRIVY_APP_ID, isPrivyConfigured } from "@repo/hooks/privy";
+import { type ReactNode, useEffect, useState } from "react";
 
+import {
+  arcTestnet,
+  isPrivyConfigured,
+  PRIVY_APP_ID,
+  PrivyBridgeProvider,
+  PrivyProvider,
+  wagmiConfig,
+  WagmiProvider,
+  WalletProvider,
+} from "@charge/web3";
+
+/**
+ * Provider tree.
+ *
+ * SSR NOTE (this bit is load-bearing):
+ * `PrivyProvider` does not establish its React context during a server render,
+ * so any component calling a Privy hook while Next prerenders the page throws
+ * and the whole build fails. wagmi, by contrast, is SSR-safe (`ssr: true`) and
+ * MUST stay in the server-rendered tree because the connect modal calls
+ * `useConnect` on every render, open or not.
+ *
+ * So: wagmi + react-query render on the server, and Privy is mounted only after
+ * hydration. Until then the bridge serves its inert value, which means the
+ * landing page still server-renders as real HTML instead of an empty shell.
+ */
 export function Providers({ children }: { children: ReactNode }) {
-  // Per-render client so the server cache is not shared across requests/users.
-  const [queryClient] = useState(() => new QueryClient());
-
-  const tree = (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <WalletProvider>{children}</WalletProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            retry: 1,
+            refetchOnWindowFocus: false,
+          },
+        },
+      }),
   );
 
-  // Privy owns login + the embedded wallet (which becomes the Circle smart
-  // account owner). Only mounted when an app id is configured; otherwise only
-  // the "Continue with wallet" (wagmi) path is usable and WalletContext skips
-  // the Privy hooks entirely.
-  if (!isPrivyConfigured()) return tree;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  return (
+  // Single source of truth: Privy hooks may only run when the provider below
+  // is actually mounted, which requires both a valid app id AND hydration.
+  const privyActive = mounted && isPrivyConfigured();
+
+  const walletTree = (
+    <PrivyBridgeProvider enabled={privyActive}>
+      <WalletProvider>{children}</WalletProvider>
+    </PrivyBridgeProvider>
+  );
+
+  const body = privyActive ? (
     <PrivyProvider
       appId={PRIVY_APP_ID}
       config={{
         supportedChains: [arcTestnet],
         defaultChain: arcTestnet,
-        loginMethods: ["wallet", "email", "google", "passkey"],
+        // Email first: the pitch is that you do not need a wallet.
+        loginMethods: ["email", "google", "passkey"],
         embeddedWallets: {
           ethereum: { createOnLogin: "users-without-wallets" },
         },
         appearance: {
           theme: "dark",
+          accentColor: "#00E58A",
           walletChainType: "ethereum-only",
         },
       }}
     >
-      {tree}
+      {walletTree}
     </PrivyProvider>
+  ) : (
+    walletTree
+  );
+
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>{body}</QueryClientProvider>
+    </WagmiProvider>
   );
 }

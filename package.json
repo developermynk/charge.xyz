@@ -1,8 +1,8 @@
 {
   "name": "charge-xyz",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Charge.xyz — DeFi at full charge. Swap, bridge, and deploy tokens across every major chain. pnpm + Turborepo monorepo.",
+  "description": "Charge.xyz \u2014 the USDC-native control panel for Arc. Swap, bridge, mint and send on Circle's Arc L1 where USDC is the gas.",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20"
@@ -11,15 +11,32 @@
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "check:secrets": "node scripts/check-client-secrets.mjs",
+    "check:css": "node scripts/check-shared-css.mjs",
+    "check:singletons": "node scripts/check-singletons.mjs",
+    "verify": "pnpm check:singletons && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm check:secrets && pnpm check:css"
   },
   "devDependencies": {
     "turbo": "^2.5.0",
-    "typescript": "^5"
+    "typescript": "^5.7.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.0"
   },
   "pnpm": {
     "overrides": {
-      "viem": "2.47.6"
+      "viem": "2.47.5",
+      "wagmi": "3.7.6",
+      "@tanstack/react-query": "5.101.4",
+      "zod": "3.25.76",
+      "use-sync-external-store": "1.6.0"
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "viem": "2",
+        "wagmi": "3"
+      }
     }
   }
 }

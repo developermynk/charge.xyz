@@ -1,6 +1,0 @@
-{
-  "name": "@repo/infra",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Deployment & infrastructure configuration (Terraform / AWS) for Charge.xyz."
-}
