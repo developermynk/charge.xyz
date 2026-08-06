@@ -92,7 +92,6 @@ export function BridgePanel() {
           fromChain: ARC_SWAP_CHAIN,
           toChain,
           amount,
-          recipient: address,
         },
         (s) => setStage(s),
       );

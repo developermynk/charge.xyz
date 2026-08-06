@@ -19,8 +19,6 @@ export interface BridgeRequest {
   toChain: string;
   /** Human-readable USDC amount, e.g. "10.5". */
   amount: string;
-  /** Destination address; defaults to the sender when omitted. */
-  recipient?: `0x${string}`;
 }
 
 export interface BridgeResult {
@@ -71,15 +69,17 @@ export async function executeBridge(
 
   const adapter = await getUserAdapter(req.provider);
 
+  // User-controlled adapter: the SDK resolves the recipient from the connected
+  // wallet and rejects an explicit `address`. A self-bridge (to your own wallet
+  // on the destination) is the only supported shape here — by design, so the
+  // app can never move funds to an address the connected wallet didn't intend.
+  // Passing `address` (even the sender's own) throws
+  // "Address should not be provided for user-controlled adapters".
   try {
     onStage?.("approve");
     const result = await getAppKit().bridge({
       from: { adapter: adapter as never, chain: req.fromChain as never },
-      to: {
-        adapter: adapter as never,
-        chain: req.toChain as never,
-        ...(req.recipient ? { address: req.recipient } : {}),
-      },
+      to: { adapter: adapter as never, chain: req.toChain as never },
       amount: req.amount,
       token: "USDC",
     } as never);
