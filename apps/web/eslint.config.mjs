@@ -23,6 +23,15 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // dApp flows read provider/account state from the wallet (an external
+  // system) inside effects and then setState — the "subscribe to external
+  // system" case. The set-state-in-effect rule still flags the direct call, so
+  // we disable it project-wide rather than littering disable comments.
+  {
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

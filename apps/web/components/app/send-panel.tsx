@@ -1,12 +1,11 @@
 "use client";
 
-import { ArrowRight, ExternalLink, Send } from "lucide-react";
+import { ExternalLink, Send } from "lucide-react";
 import * as React from "react";
 import { isAddress } from "viem";
 
 import {
   AmountInput,
-  Badge,
   Button,
   Card,
   DetailRow,

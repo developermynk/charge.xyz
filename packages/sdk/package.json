@@ -25,6 +25,7 @@
     "@circle-fin/adapter-viem-v2": "^1.14.0",
     "@circle-fin/app-kit": "^1.10.0",
     "typescript": "^5.7.3",
-    "viem": "2.47.5"
+    "viem": "2.47.5",
+    "eslint": "^9"
   }
 }

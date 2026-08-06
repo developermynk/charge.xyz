@@ -40,9 +40,12 @@ export function Modal({
     z-order. Our glass Cards use backdrop-blur, so a modal opened from inside
     one was being painted UNDER the card that opened it. Portalling to body
     escapes every ancestor stacking context for good.
+
+    The portal target (document.body) exists only in the browser, so we seed a
+    client-only flag lazily. This runs once at construction — no effect, no
+    per-render state sync, no cascading renders.
   */
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const [mounted] = React.useState(() => typeof document !== "undefined");
 
   React.useEffect(() => {
     if (!open) return;

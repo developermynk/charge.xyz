@@ -2,7 +2,7 @@
   "name": "charge-xyz",
   "version": "2.0.0",
   "private": true,
-  "description": "Charge.xyz — the USDC-native control panel for Arc. Swap, bridge, mint and send on Circle's Arc L1 where USDC is the gas.",
+  "description": "Charge.xyz \u2014 the USDC-native control panel for Arc. Swap, bridge, mint and send on Circle's Arc L1 where USDC is the gas.",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20"
@@ -20,7 +20,9 @@
   },
   "devDependencies": {
     "turbo": "^2.5.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.0"
   },
   "pnpm": {
     "overrides": {
