@@ -1,11 +1,15 @@
 /**
  * Swap — client-side, signed by the user's wallet.
  *
- * The kit key is a server secret, so the browser never holds it: the quote and
- * the execution key are fetched from our own API route, which reads KIT_KEY
- * server-side. The SIGNING still happens here, in the browser, with the user's
- * wallet. That split is what lets us keep the secret off the client without
- * handing custody to a developer wallet.
+ * KEY SECURITY DECISION (verified against Arc docs, app-kit/swap):
+ * the kit key is OPTIONAL — without one, requests simply run against a rate
+ * limit. It is also a server-only credential. Since Charge signs with the
+ * USER's browser wallet (`createViemAdapterFromProvider`, which the docs
+ * explicitly support for browser flows), sending a kit key to the client would
+ * leak a server secret to every visitor for nothing but a rate-limit bump.
+ *
+ * So: no kit key on the client, ever. If rate limits become a problem the fix
+ * is a server-side quote proxy, NOT shipping the key to the browser.
  */
 
 import { validateSwap } from "@charge/chains";
@@ -19,8 +23,6 @@ export interface SwapRequest {
   tokenIn: string;
   tokenOut: string;
   amountIn: string;
-  /** Fetched from /api/swap/key just before execution; never persisted. */
-  kitKey: string;
   slippageBps?: number;
 }
 
@@ -53,7 +55,6 @@ export async function estimateSwap(req: SwapRequest): Promise<SwapEstimate> {
     tokenIn: req.tokenIn as never,
     tokenOut: req.tokenOut as never,
     amountIn: req.amountIn,
-    config: { kitKey: req.kitKey },
   } as never);
 
   const estimated = (result as { estimatedOutput?: { amount?: string } })
@@ -91,7 +92,6 @@ export async function executeSwap(req: SwapRequest): Promise<SwapExecution> {
     amountIn: req.amountIn,
   };
   const config = {
-    kitKey: req.kitKey,
     ...(req.slippageBps !== undefined ? { slippageBps: req.slippageBps } : {}),
   };
 

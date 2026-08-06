@@ -13,9 +13,9 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "check:secrets": "node scripts/check-secrets.mjs",
-    "check:viem": "node scripts/check-single-viem.mjs",
-    "verify": "pnpm check:viem && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm check:secrets"
+    "check:secrets": "node scripts/check-client-secrets.mjs",
+    "check:singletons": "node scripts/check-singletons.mjs",
+    "verify": "pnpm check:singletons && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm check:secrets"
   },
   "devDependencies": {
     "turbo": "^2.5.0",

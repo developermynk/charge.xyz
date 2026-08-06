@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@charge/chains": "workspace:*",
+    "@charge/contracts": "workspace:*",
     "@charge/sdk": "workspace:*",
     "@charge/ui": "workspace:*",
     "@charge/web3": "workspace:*",
