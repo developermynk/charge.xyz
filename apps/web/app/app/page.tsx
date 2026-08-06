@@ -81,7 +81,20 @@ export default function OverviewPage() {
         />
       </div>
 
-      {balance.nativeRaw === 0n && !balance.isLoading && (
+      {balance.rpcError && !balance.isLoading && (
+        <Card className="border-danger/25 bg-danger/[0.07] p-4">
+          <p className="text-sm text-fg">
+            <strong className="font-semibold">Cannot reach Arc.</strong> The
+            RPC endpoint is unreachable — balances may be wrong. Check{" "}
+            <code className="rounded bg-white/10 px-1 py-0.5 text-xs">
+              NEXT_PUBLIC_ARC_RPC_URL
+            </code>
+            .
+          </p>
+        </Card>
+      )}
+
+      {balance.nativeRaw === 0n && !balance.isLoading && !balance.rpcError && (
         <Card className="border-warning/25 bg-warning/[0.07] p-4">
           <p className="text-sm text-fg">
             <strong className="font-semibold">No gas balance.</strong> You need

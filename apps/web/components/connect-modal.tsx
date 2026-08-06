@@ -32,6 +32,23 @@ export function ConnectModal({
   const { isConnected } = useWallet();
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState<string | null>(null);
+  const [privyBlocked, setPrivyBlocked] = React.useState(false);
+
+  // Surface Privy's "source not authorized" origin error, which otherwise only
+  // shows up as a silent console unhandledRejection and a dead email button.
+  React.useEffect(() => {
+    function onRejection(ev: PromiseRejectionEvent) {
+      const msg = String(ev.reason?.message ?? ev.reason ?? "");
+      if (/has not been authorized yet/i.test(msg)) {
+        setPrivyBlocked(true);
+        setError(
+          "Email sign-in is blocked: this site's origin is not authorized in the Privy dashboard. Add this origin under Settings → Domains, then reload.",
+        );
+      }
+    }
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => window.removeEventListener("unhandledrejection", onRejection);
+  }, []);
 
   // Close automatically once a connection lands.
   React.useEffect(() => {
@@ -91,7 +108,7 @@ export function ConnectModal({
           <p className="mb-2.5 text-xs font-medium uppercase tracking-wider text-fg-tertiary">
             Recommended
           </p>
-          {isPrivyConfigured() ? (
+          {isPrivyConfigured() && !privyBlocked ? (
             <button
               type="button"
               onClick={handleEmail}
@@ -118,6 +135,12 @@ export function ConnectModal({
             <StatusLine tone="warning">
               Email sign-in is unavailable: this deployment has no Privy app id
               configured. You can still continue with a wallet below.
+            </StatusLine>
+          )}
+          {privyBlocked && (
+            <StatusLine tone="warning">
+              Email sign-in is blocked: this origin is not authorized in the
+              Privy dashboard. Add it under Settings → Domains, then reload.
             </StatusLine>
           )}
         </section>

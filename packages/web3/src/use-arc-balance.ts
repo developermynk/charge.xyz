@@ -32,6 +32,8 @@ export interface ArcBalance {
   usdcFormatted: string;
   usdcRaw: bigint;
   isLoading: boolean;
+  /** True when the RPC read failed (e.g. bad/unreachable NEXT_PUBLIC_ARC_RPC_URL). */
+  rpcError: boolean;
   refetch: () => void;
 }
 
@@ -65,6 +67,7 @@ export function useArcBalance(address: `0x${string}` | undefined): ArcBalance {
     usdcRaw,
     usdcFormatted: formatUnits(usdcRaw, ARC_ERC20_DECIMALS),
     isLoading: native.isLoading || usdc.isLoading,
+    rpcError: (native.isError || usdc.isError) && !native.isLoading && !usdc.isLoading,
     refetch,
   };
 }
