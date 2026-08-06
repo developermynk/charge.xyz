@@ -209,6 +209,46 @@ export function BridgePanel() {
 
       {error && <StatusLine tone="danger">{error}</StatusLine>}
 
+      {steps.length > 0 && (phase === "done" || phase === "error") && (
+        <Card className="p-4">
+          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-fg-tertiary">
+            Transfer steps
+          </p>
+          <ul className="space-y-2">
+            {steps.map((s) => (
+              <li key={s.name} className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-fg">{s.name}</span>
+                <span
+                  className={
+                    s.state === "success"
+                      ? "text-accent"
+                      : s.state === "error"
+                        ? "text-danger"
+                        : "text-fg-tertiary"
+                  }
+                >
+                  {s.state}
+                  {s.txHash && (
+                    <a
+                      href={
+                        s.name.toLowerCase().includes("mint")
+                          ? `https://sepolia.basescan.org/tx/${s.txHash}`
+                          : arcTxUrl(s.txHash)
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-1.5 underline underline-offset-2"
+                    >
+                      ↗
+                    </a>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       {phase === "done" && (
         <StatusLine tone="success">
           {destinationTxHash ? (
