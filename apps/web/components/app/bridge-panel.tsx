@@ -19,6 +19,7 @@ import {
   executeBridge,
   humanizeBridgeError,
   type BridgeStageId,
+  type BridgeStepInfo,
 } from "@charge/sdk";
 import { useArcBalance, useWallet } from "@charge/web3";
 
@@ -36,6 +37,8 @@ export function BridgePanel() {
   const [stage, setStage] = React.useState<BridgeStageId | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [txHash, setTxHash] = React.useState<string | null>(null);
+  const [destinationTxHash, setDestinationTxHash] = React.useState<string | null>(null);
+  const [steps, setSteps] = React.useState<BridgeStepInfo[]>([]);
 
   const amountNum = Number(amount);
   const amountError =
@@ -96,8 +99,28 @@ export function BridgePanel() {
         (s) => setStage(s),
       );
 
-      if (result.txHash) setTxHash(result.txHash);
-      setPhase("done");
+      // BridgeResult.state is the authoritative outcome: 'success' only after
+      // the destination mint lands. Surface pending/error honestly instead of
+      // always reporting success (which previously hid a failed mint).
+      setTxHash(result.txHash ?? null);
+      setDestinationTxHash(result.destinationTxHash ?? null);
+      setSteps(result.steps);
+      if (result.state === "success") {
+        setPhase("done");
+      } else if (result.state === "error") {
+        const failed = result.steps.find((s) => s.state === "error");
+        setError(
+          failed?.errorMessage
+            ? `Bridge failed at ${failed.name}: ${failed.errorMessage}`
+            : "The bridge could not be completed.",
+        );
+        setPhase("error");
+      } else {
+        // Pending — relayer/mint still settling. Keep the running UI but mark
+        // the burn done so the user sees progress.
+        setStage("mint");
+        setPhase("done");
+      }
       setAmount("");
       balance.refetch();
     } catch (err) {
@@ -188,16 +211,33 @@ export function BridgePanel() {
 
       {phase === "done" && (
         <StatusLine tone="success">
-          Burn confirmed on Arc. Your USDC is now minting on the destination —
-          that step finishes when Circle&apos;s attestation lands (usually 1–15
-          min). The burn shows as a transfer to the null address, which is
-          normal for CCTP.{" "}
+          {destinationTxHash ? (
+            <>
+              Bridge complete — your USDC was minted on the destination.{" "}
+              <a
+                href={`https://sepolia.basescan.org/tx/${destinationTxHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 underline underline-offset-2"
+              >
+                View destination transaction
+                <ExternalLink className="size-3" aria-hidden />
+              </a>
+            </>
+          ) : (
+            <>
+              Burn confirmed on Arc. Your USDC is now minting on the destination
+              — that step finishes when Circle&apos;s attestation lands (usually
+              1–15 min). The burn shows as a transfer to the null address,
+              which is normal for CCTP.{" "}
+            </>
+          )}
           {txHash && (
             <a
               href={arcTxUrl(txHash)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 underline underline-offset-2"
+              className="ml-1 inline-flex items-center gap-1 underline underline-offset-2"
             >
               View source transaction
               <ExternalLink className="size-3" aria-hidden />

@@ -21,10 +21,27 @@ export interface BridgeRequest {
   amount: string;
 }
 
-export interface BridgeResult {
+export interface BridgeStepInfo {
+  name: string;
+  state: "pending" | "success" | "error" | "noop";
   txHash?: string;
+  explorerUrl?: string;
+  errorMessage?: string;
+}
+
+export interface BridgeResult {
+  /** High-level outcome from Circle App Kit. */
+  state: "pending" | "success" | "error";
+  amount: string;
+  token: "USDC";
+  /** Per-step detail (approve / burn / mint) for accurate UI feedback. */
+  steps: BridgeStepInfo[];
+  /** Source (burn) transaction hash, if it executed. */
+  txHash?: string;
+  /** Destination (mint) transaction hash, once the mint lands. */
   destinationTxHash?: string;
-  status: "completed" | "pending";
+  /** True when Circle's relayer submitted the mint (no manual wallet action). */
+  useForwarder?: boolean;
 }
 
 export class BridgeError extends ChargeError {}
@@ -77,24 +94,57 @@ export async function executeBridge(
   // "Address should not be provided for user-controlled adapters".
   try {
     onStage?.("approve");
-    const result = await getAppKit().bridge({
+    const raw = (await getAppKit().bridge({
       from: { adapter: adapter as never, chain: req.fromChain as never },
       to: { adapter: adapter as never, chain: req.toChain as never },
       amount: req.amount,
       token: "USDC",
-    } as never);
-
-    onStage?.("mint");
-
-    const r = result as {
-      txHash?: string;
-      sourceTxHash?: string;
-      destinationTxHash?: string;
+    } as never)) as {
+      state: "pending" | "success" | "error";
+      steps?: Array<{
+        name: string;
+        state: string;
+        txHash?: string;
+        explorerUrl?: string;
+        errorMessage?: string;
+        forwarded?: boolean;
+      }>;
+      source?: { address: string; chain: unknown };
+      destination?: { address: string; chain: unknown; useForwarder?: boolean };
     };
+
+    const steps: BridgeStepInfo[] = (raw.steps ?? []).map((s) => ({
+      name: s.name,
+      state: s.state as BridgeStepInfo["state"],
+      txHash: s.txHash,
+      explorerUrl: s.explorerUrl,
+      errorMessage: s.errorMessage,
+    }));
+
+    const burn = steps.find((s) => s.name.toLowerCase().includes("burn"));
+    const mint = steps.find((s) => s.name.toLowerCase().includes("mint"));
+    const useForwarder = Boolean(raw.destination?.useForwarder);
+
+    // `bridge()` (AppKit) runs the full approve -> burn -> mint flow and only
+    // resolves after the mint lands. If it returned in an error state, surface
+    // the exact failing step instead of reporting success.
+    if (raw.state === "error") {
+      const failed = steps.find((s) => s.state === "error");
+      const msg = failed?.errorMessage ?? "The bridge could not be completed.";
+      throw new BridgeError(`Bridge failed at ${failed?.name ?? "step"}: ${msg}`);
+    }
+
+    const mintTx = mint?.txHash;
+    if (mintTx) onStage?.("mint");
+
     return {
-      txHash: r.txHash ?? r.sourceTxHash,
-      destinationTxHash: r.destinationTxHash,
-      status: r.destinationTxHash ? "completed" : "pending",
+      state: raw.state,
+      amount: req.amount,
+      token: "USDC",
+      steps,
+      txHash: burn?.txHash,
+      destinationTxHash: mintTx,
+      useForwarder,
     };
   } catch (err) {
     throw new BridgeError(humanizeBridgeError(err), { cause: err });

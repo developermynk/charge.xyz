@@ -23,6 +23,7 @@ export {
   type BridgeRequest,
   type BridgeResult,
   type BridgeStageId,
+  type BridgeStepInfo,
 } from "./bridge.ts";
 export {
   publicClient,
