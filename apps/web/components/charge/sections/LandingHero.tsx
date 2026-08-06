@@ -66,7 +66,7 @@ export function LandingHero() {
           <span className="flex items-center gap-1.5">
             {getChainLogo(ARB.code, 16)}
             <span className="text-[12px] font-semibold tracking-[0.04em] text-lime">
-              Now live on Arbitrum (ARB)
+              Now live on ARC TESTNET
             </span>
           </span>
         </motion.div>

@@ -36,6 +36,9 @@ export async function POST(req: Request) {
 
   const { chain, tokenIn, tokenOut, amountIn, slippageBps } = validation.value;
 
+  // Debug log: quote request
+  console.log(`[SWAP QUOTE] chain=${chain} tokenIn=${tokenIn} tokenOut=${tokenOut} amountIn=${amountIn} slippageBps=${slippageBps}`);
+
   try {
     const env = getSwapEnv();
     const kit = getSwapKit();
@@ -83,10 +86,14 @@ export async function POST(req: Request) {
       }
     }
 
+    // Debug log: quote response
+    console.log(`[SWAP QUOTE] success estimatedOutput=${out.estimatedOutput}`);
+
     return NextResponse.json(out);
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Swap estimate failed";
+    console.error("[SWAP QUOTE] error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

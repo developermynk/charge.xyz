@@ -1,21 +1,3 @@
-/**
- * Copyright 2026 Circle Internet Group, Inc.  All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -58,6 +40,10 @@ export interface SwapResult {
   tokenOut?: string;
   chain?: string;
   fees?: unknown;
+  /** The address that actually signed/sent the transaction (must match connected wallet) */
+  executorAddress?: string;
+  /** The connected user's wallet address */
+  connectedWalletAddress?: string;
 }
 
 export interface SwapConfig {
@@ -78,6 +64,13 @@ export interface SwapTransaction {
   timestamp: number;
   status: "success" | "error";
   error?: string;
+}
+
+/* ─── Debug Logger ──────────────────────────────────────────────── */
+
+function logSwap(step: string, data: Record<string, unknown>) {
+  const ts = new Date().toISOString();
+  console.log(`[SWAP][${ts}] ${step}`, JSON.stringify(data, null, 2));
 }
 
 /* ─── Hook ──────────────────────────────────────────────────────── */
@@ -105,7 +98,7 @@ export function useSwap() {
   const [kitKey, setKitKey] = useState<string | null>(null);
 
   /* Wallet connection */
-  const { address, isConnected, walletType, bundlerClient } = useWallet();
+  const { address, isConnected, walletType } = useWallet();
   const { data: connectorClient } = useConnectorClient();
 
   /* Auto-quote debounce */
@@ -191,7 +184,7 @@ export function useSwap() {
     setStatus("idle");
   }, []);
 
-  /* ── Quote (still server-side — no secret needed for estimates) ── */
+  /* ── Quote (server-side estimate — no signing) ────────────────── */
 
   const getQuote = useCallback(async () => {
     if (!canAct) return;
@@ -224,7 +217,7 @@ export function useSwap() {
     }
   }, [canAct, chain.id, tokenIn, tokenOut, amount, slippageBps]);
 
-  /* ── Swap (CLIENT-SIDE — user's connected wallet signs) ────────── */
+  /* ── Execute Swap (CLIENT-SIDE ONLY — user's wallet signs) ────── */
 
   const executeSwap = useCallback(async () => {
     if (!canAct || !address || !kitKey) {
@@ -238,8 +231,8 @@ export function useSwap() {
       return;
     }
 
-    // Circle Smart Account (ERC-4337) via Privy doesn't expose an EIP-1193 provider.
-    // Swap Kit currently requires an EIP-1193 provider (injected wallet like MetaMask).
+    // Circle Smart Account (ERC-4337) via Privy doesn't expose EIP-1193 provider.
+    // Swap Kit requires an EIP-1193 provider (injected wallet like MetaMask).
     if (walletType === "circle") {
       setError(
         "Swap not supported with Circle Smart Account. Please connect with MetaMask or another injected wallet to swap.",
@@ -258,18 +251,25 @@ export function useSwap() {
     setError(null);
     setResult(null);
 
-    try {
-      // Dynamically import to keep these out of the initial bundle and
-      // to avoid SSR issues (these modules use browser APIs).
-      const [{ SwapKit }, { createViemAdapterFromProvider }] = await Promise.all(
-        [
-          import("@circle-fin/swap-kit"),
-          import("@circle-fin/adapter-viem-v2"),
-        ],
-      );
+    // Log connected wallet
+    logSwap("CONNECTED_WALLET", {
+      connectedWalletAddress: address,
+      walletType,
+      chainId: chain.id,
+      tokenIn,
+      tokenOut,
+      amountIn: amount,
+      slippageBps,
+    });
 
-      // Extract the EIP-1193 provider from wagmi's connector client
-      // Try multiple paths for different wagmi/viem versions
+    try {
+      // Dynamic imports to avoid SSR issues
+      const [{ SwapKit }, { createViemAdapterFromProvider }] = await Promise.all([
+        import("@circle-fin/swap-kit"),
+        import("@circle-fin/adapter-viem-v2"),
+      ]);
+
+      // Extract EIP-1193 provider from wagmi connector client
       const provider =
         (connectorClient as any).transport?.value?.provider ??
         (connectorClient as any).transport?.provider ??
@@ -283,7 +283,6 @@ export function useSwap() {
         );
       }
 
-      // Validate provider has required EIP-1193 methods
       if (typeof provider.request !== "function") {
         throw new Error(
           "Connected wallet does not expose a valid EIP-1193 provider. " +
@@ -291,13 +290,52 @@ export function useSwap() {
         );
       }
 
-      // Build adapter from the user's browser wallet
+      // Get signer address from provider and verify it matches connected wallet
+      let signerAddress: string | undefined;
+      try {
+        const accounts = await provider.request({ method: "eth_accounts" });
+        if (accounts && accounts.length > 0) {
+          signerAddress = accounts[0];
+        }
+      } catch {
+        // ignore
+      }
+
+      logSwap("SIGNER_VERIFIED", {
+        connectedWalletAddress: address,
+        signerAddressFromProvider: signerAddress,
+        match: signerAddress?.toLowerCase() === address.toLowerCase(),
+      });
+
+      if (signerAddress && signerAddress.toLowerCase() !== address.toLowerCase()) {
+        throw new Error(
+          `Wallet address mismatch! Connected: ${address}, Provider signer: ${signerAddress}. ` +
+            `Please reconnect your wallet.`,
+        );
+      }
+
+      // Build adapter from user's browser wallet
       const adapter = await createViemAdapterFromProvider({
         provider,
         capabilities: { addressContext: "user-controlled" },
       });
 
+      logSwap("ADAPTER_CREATED", {
+        connectedWalletAddress: address,
+        chainId: chain.id,
+      });
+
       const kit = new SwapKit();
+
+      logSwap("SWAP_START", {
+        connectedWalletAddress: address,
+        signerAddress,
+        chainId: chain.id,
+        tokenIn,
+        tokenOut,
+        amountIn: amount,
+        slippageBps,
+      });
 
       const swapResult = await kit.swap({
         from: { adapter, chain: chain.id as any },
@@ -312,6 +350,35 @@ export function useSwap() {
       });
 
       const sr = swapResult as unknown as Record<string, unknown>;
+
+      // Extract executor address from result
+      const executorAddr =
+        (sr.fromAddress as string | undefined) ||
+        (sr.executorAddress as string | undefined) ||
+        signerAddress;
+
+      logSwap("SWAP_SUCCESS", {
+        connectedWalletAddress: address,
+        signerAddressFromProvider: signerAddress,
+        executorAddressFromResult: executorAddr,
+        txHash: sr.txHash,
+        explorerUrl: sr.explorerUrl,
+        amountIn: sr.amountIn,
+        amountOut: sr.amountOut,
+      });
+
+      // Verify executor matches connected wallet
+      if (executorAddr && executorAddr.toLowerCase() !== address.toLowerCase()) {
+        logSwap("EXECUTOR_MISMATCH", {
+          connectedWalletAddress: address,
+          executorAddress: executorAddr,
+          error: "Transaction sent from different address than connected wallet!",
+        });
+        throw new Error(
+          `Transaction executor mismatch: connected wallet is ${address} but transaction was sent from ${executorAddr}. This should not happen with user-controlled wallet.`,
+        );
+      }
+
       const resultData: SwapResult = {
         txHash: sr.txHash as string | undefined,
         explorerUrl: sr.explorerUrl as string | undefined,
@@ -321,6 +388,8 @@ export function useSwap() {
         tokenOut: sr.tokenOut as string | undefined,
         chain: sr.chain as string | undefined,
         fees: sr.fees,
+        executorAddress: executorAddr,
+        connectedWalletAddress: address,
       };
 
       setResult(resultData);
@@ -342,6 +411,11 @@ export function useSwap() {
       ]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Swap failed";
+      logSwap("SWAP_FAILED", {
+        connectedWalletAddress: address,
+        error: msg,
+        errorStack: e instanceof Error ? e.stack : undefined,
+      });
       setError(msg);
       setStatus("error");
       setHistory((h) => [
@@ -358,7 +432,19 @@ export function useSwap() {
         ...h,
       ]);
     }
-  }, [canAct, address, walletType, connectorClient, kitKey, chain.id, tokenIn, tokenOut, amount, slippageBps]);
+  }, [
+    canAct,
+    address,
+    walletType,
+    connectorClient,
+    kitKey,
+    chain.id,
+    chain.name,
+    tokenIn,
+    tokenOut,
+    amount,
+    slippageBps,
+  ]);
 
   /* ── Auto-quote when params change ────────────────────────────── */
 
@@ -372,8 +458,7 @@ export function useSwap() {
     return () => {
       if (quoteTimer.current) clearTimeout(quoteTimer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chain.id, tokenIn, tokenOut, amount, canAct, config?.configured]);
+  }, [chain.id, tokenIn, tokenOut, amount, canAct, config?.configured, getQuote]);
 
   return {
     /* State */

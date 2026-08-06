@@ -219,9 +219,18 @@ function QuoteDetails({
 function StatusBanner({ status, error: err, result }: {
   status: string;
   error: string | null;
-  result: { txHash?: string; explorerUrl?: string; [key: string]: unknown } | null;
+  result: { 
+    txHash?: string; 
+    explorerUrl?: string; 
+    executorAddress?: string; 
+    connectedWalletAddress?: string;
+    [key: string]: unknown 
+  } | null;
 }) {
   if (status === "success" && result) {
+    const executorMatches = result.executorAddress && result.connectedWalletAddress &&
+      result.executorAddress.toLowerCase() === result.connectedWalletAddress.toLowerCase();
+    
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
         className="rounded-xl border border-lime/20 bg-lime/5 px-4 py-3">
@@ -238,6 +247,41 @@ function StatusBanner({ status, error: err, result }: {
             View on Explorer
             <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 1H11V8M11 1L1 11" /></svg>
           </a>
+        )}
+        
+        {/* Wallet execution verification */}
+        {(result.executorAddress || result.connectedWalletAddress) && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+            className="mt-3 pt-3 border-t border-lime/10">
+            <div className="flex items-center gap-2 text-[11px] font-medium">
+              <span className="text-ink-3">Executed by:</span>
+              <span className="font-mono text-lime">
+                {result.executorAddress 
+                  ? (result.executorAddress as string).slice(0, 6) + "…" + (result.executorAddress as string).slice(-4)
+                  : "—"}
+              </span>
+              {result.connectedWalletAddress && (
+                <>
+                  <span className="text-ink-3">←</span>
+                  <span className="font-mono text-lime">your wallet</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                    executorMatches ? "bg-lime/10 text-lime" : "bg-red-400/10 text-red-400"
+                  }`}>
+                    {executorMatches ? "MATCHES ✓" : "MISMATCH ✗"}
+                  </span>
+                </>
+              )}
+            </div>
+            {!executorMatches && result.connectedWalletAddress && result.executorAddress && (
+              <div className="mt-1.5 text-[10px] text-red-400">
+                <strong>Connected wallet:</strong> {(result.connectedWalletAddress as string).slice(0, 6)}…{(result.connectedWalletAddress as string).slice(-4)}
+                <br />
+                <strong>Transaction sender:</strong> {(result.executorAddress as string).slice(0, 6)}…{(result.executorAddress as string).slice(-4)}
+                <br />
+                These addresses MUST match. If they don't, the swap was signed by a different wallet.
+              </div>
+            )}
+          </motion.div>
         )}
       </motion.div>
     );

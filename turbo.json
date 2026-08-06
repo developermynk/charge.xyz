@@ -1,15 +1,25 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "NODE_ENV",
+    "NEXT_PUBLIC_PRIVY_APP_ID",
+    "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID",
+    "NEXT_PUBLIC_ARC_RPC_URL",
+    "KIT_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "artifacts/**", "typechain-types/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "typecheck": {
       "dependsOn": ["^build"]
     },
     "lint": {},
+    "test": {
+      "dependsOn": ["^build"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

@@ -1,8 +1,8 @@
 {
   "name": "charge-xyz",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Charge.xyz — DeFi at full charge. Swap, bridge, and deploy tokens across every major chain. pnpm + Turborepo monorepo.",
+  "description": "Charge.xyz — the USDC-native control panel for Arc. Swap, bridge, mint and send on Circle's Arc L1 where USDC is the gas.",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20"
@@ -11,15 +11,24 @@
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "check:viem": "node scripts/check-single-viem.mjs",
+    "verify": "pnpm check:viem && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm check:secrets"
   },
   "devDependencies": {
     "turbo": "^2.5.0",
-    "typescript": "^5"
+    "typescript": "^5.7.3"
   },
   "pnpm": {
     "overrides": {
-      "viem": "2.47.6"
+      "viem": "2.47.5"
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "viem": "2"
+      }
     }
   }
 }
