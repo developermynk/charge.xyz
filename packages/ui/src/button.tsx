@@ -49,17 +49,46 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof button> {
   loading?: boolean;
+  /**
+   * Render the child element instead of a <button>, merging in the button's
+   * classes. Use for links: `<Button asChild><Link href="/x">Go</Link></Button>`.
+   *
+   * A <Link> nested inside a <button> is invalid HTML and breaks keyboard and
+   * screen-reader navigation, so styled links must become real anchors.
+   * Implemented locally rather than pulling in @radix-ui/react-slot for one
+   * feature.
+   */
+  asChild?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(
-    { className, variant, size, block, loading, children, disabled, ...props },
+    {
+      className,
+      variant,
+      size,
+      block,
+      loading,
+      asChild,
+      children,
+      disabled,
+      ...props
+    },
     ref,
   ) {
+    const classes = cn(button({ variant, size, block }), className);
+
+    if (asChild && React.isValidElement(children)) {
+      const child = children as React.ReactElement<{ className?: string }>;
+      return React.cloneElement(child, {
+        className: cn(classes, child.props.className),
+      });
+    }
+
     return (
       <button
         ref={ref}
-        className={cn(button({ variant, size, block }), className)}
+        className={classes}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
         {...props}

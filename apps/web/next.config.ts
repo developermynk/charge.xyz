@@ -1,32 +1,47 @@
-/**
- * Copyright 2026 Circle Internet Group, Inc.  All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Compile the workspace packages from source (they ship TypeScript, not builds).
+  reactStrictMode: true,
+
+  /**
+   * Workspace packages ship TypeScript source rather than a build step, so
+   * Next compiles them itself. This keeps the monorepo free of a
+   * watch-and-rebuild loop during development.
+   */
   transpilePackages: [
-    "@repo/ui",
-    "@repo/hooks",
-    "@repo/sdk",
-    "@repo/types",
-    "@repo/utils",
+    "@charge/chains",
+    "@charge/ui",
+    "@charge/web3",
+    "@charge/sdk",
+    "@charge/contracts",
   ],
+
+  /**
+   * Privy's Solana support arrives via optional peer dependencies. We install
+   * them (see apps/web devDependencies) so the module graph resolves, but the
+   * code paths are unreachable in an EVM-only app and tree-shake out of the
+   * client bundle.
+   *
+   * Do NOT alias these to an empty stub: the modules are imported by NAME
+   * (e.g. `wrapNullable`), so a default-only stub fails the build with
+   * "export was not found in module".
+   */
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

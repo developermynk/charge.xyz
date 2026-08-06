@@ -13,12 +13,15 @@
  * and never learns whether Privy exists.
  */
 
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets, PrivyProvider } from "@privy-io/react-auth";
 import * as React from "react";
 
 import { ARC_CHAIN_ID } from "@charge/chains";
 
 import { isPrivyConfigured } from "./privy.ts";
+
+/** Re-exported so apps never import @privy-io directly (single-copy rule). */
+export { PrivyProvider };
 
 export interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] | object }): Promise<unknown>;
@@ -115,16 +118,22 @@ function PrivyDisabled({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Chooses the implementation once. `isPrivyConfigured()` reads a build-time
- * env var, so the branch is stable for the lifetime of the app and hook order
- * can never change between renders.
+ * Chooses the implementation from an explicit `enabled` flag.
+ *
+ * `enabled` MUST track exactly when `<PrivyProvider>` is actually mounted.
+ * Deriving it independently here (e.g. from `isPrivyConfigured()` alone) caused
+ * a real build failure: during SSR the provider is not mounted, but this
+ * component still rendered the Privy-reading branch, so `useWallets` was called
+ * with no context and prerendering crashed. One flag, one source of truth.
  */
 export function PrivyBridgeProvider({
+  enabled,
   children,
 }: {
+  enabled: boolean;
   children: React.ReactNode;
 }) {
-  return isPrivyConfigured() ? (
+  return enabled ? (
     <PrivyEnabled>{children}</PrivyEnabled>
   ) : (
     <PrivyDisabled>{children}</PrivyDisabled>
