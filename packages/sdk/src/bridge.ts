@@ -102,7 +102,8 @@ export async function executeBridge(
 }
 
 export function humanizeBridgeError(err: unknown): string {
-  const msg = (err instanceof Error ? err.message : String(err ?? "")).toLowerCase();
+  const raw = err instanceof Error ? err.message : String(err ?? "");
+  const msg = raw.toLowerCase();
 
   if (msg.includes("user rejected") || msg.includes("user denied")) {
     return "You rejected the transaction in your wallet.";
@@ -116,5 +117,6 @@ export function humanizeBridgeError(err: unknown): string {
   if (msg.includes("unsupported") || msg.includes("route")) {
     return "That bridge route is not supported yet.";
   }
+  if (raw) return `Bridge failed: ${raw}`;
   return "The bridge could not be completed. Please try again.";
 }

@@ -273,7 +273,7 @@ export function CreateTokenPanel() {
         <StatusLine>Deploying your contract to Arc…</StatusLine>
       )}
 
-      <Button type="submit" size="lg" block loading={busy} disabled={!canSubmit}>
+      <Button type="submit" size="xl" block loading={busy} disabled={!canSubmit}>
         {phase === "signing" ? (
           "Confirm in your wallet…"
         ) : phase === "pending" ? (

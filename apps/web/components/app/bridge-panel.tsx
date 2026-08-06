@@ -206,7 +206,7 @@ export function BridgePanel() {
 
       <Button
         type="submit"
-        size="lg"
+        size="xl"
         block
         loading={phase === "running"}
         disabled={!canSubmit}

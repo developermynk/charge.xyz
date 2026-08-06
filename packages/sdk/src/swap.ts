@@ -50,16 +50,22 @@ export async function estimateSwap(req: SwapRequest): Promise<SwapEstimate> {
   assertValid(req);
 
   const adapter = await getUserAdapter(req.provider);
-  const result = await getAppKit().estimateSwap({
+  const result = (await getAppKit().estimateSwap({
     from: { adapter: adapter as never, chain: req.chain as never },
     tokenIn: req.tokenIn as never,
     tokenOut: req.tokenOut as never,
     amountIn: req.amountIn,
-  } as never);
+  } as never)) as {
+    estimatedOutput?: { amount?: string; token?: string } | string;
+    fees?: unknown;
+  };
 
-  const estimated = (result as { estimatedOutput?: { amount?: string } })
-    .estimatedOutput;
-  const amountOut = estimated?.amount ?? "0";
+  // v1.x: estimatedOutput is { amount, token }; tolerate a bare string too.
+  const out = result.estimatedOutput;
+  const amountOut =
+    typeof out === "string"
+      ? out
+      : (out?.amount ?? "0");
 
   const inNum = Number(req.amountIn);
   const outNum = Number(amountOut);
@@ -123,7 +129,8 @@ function isUndeployedWalletError(err: unknown): boolean {
 
 /** Turn SDK/RPC noise into something a user can act on. */
 export function humanizeSwapError(err: unknown): string {
-  const msg = (err instanceof Error ? err.message : String(err ?? "")).toLowerCase();
+  const raw = err instanceof Error ? err.message : String(err ?? "");
+  const msg = raw.toLowerCase();
 
   if (msg.includes("user rejected") || msg.includes("user denied")) {
     return "You rejected the transaction in your wallet.";
@@ -140,5 +147,8 @@ export function humanizeSwapError(err: unknown): string {
   if (msg.includes("chain") && msg.includes("mismatch")) {
     return "Your wallet is on the wrong network. Switch to Arc Testnet.";
   }
+  // Surface the underlying message — it is the only way to tell a flaky RPC
+  // (rate-limited, timeout) from a genuine swap failure.
+  if (raw) return `Swap failed: ${raw}`;
   return "The swap could not be completed. Please try again.";
 }

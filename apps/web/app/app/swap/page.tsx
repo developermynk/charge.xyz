@@ -16,7 +16,7 @@ export default function SwapPage() {
         </p>
       </header>
 
-      <Card className="p-6">
+      <Card className="p-6 sm:p-8">
         <SwapPanel />
       </Card>
     </div>

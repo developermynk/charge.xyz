@@ -36,7 +36,8 @@ const button = cva(
       size: {
         sm: "h-9 px-3.5 text-sm rounded-[10px]",
         md: "h-11 px-5 text-sm rounded-xl",
-        lg: "h-13 px-7 text-base rounded-2xl",
+        lg: "h-14 px-8 text-[15px] rounded-2xl",
+        xl: "h-16 px-9 text-base rounded-2xl",
         icon: "h-10 w-10 rounded-xl",
       },
       block: { true: "w-full", false: "" },

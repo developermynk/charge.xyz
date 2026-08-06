@@ -234,7 +234,7 @@ export function SendPanel() {
         </StatusLine>
       )}
 
-      <Button type="submit" size="lg" block loading={busy} disabled={!canSubmit}>
+      <Button type="submit" size="xl" block loading={busy} disabled={!canSubmit}>
         {phase === "signing" ? (
           "Confirm in your wallet…"
         ) : phase === "pending" ? (

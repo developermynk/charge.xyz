@@ -252,7 +252,7 @@ export function SwapPanel() {
         </StatusLine>
       )}
 
-      <Button type="submit" size="lg" block loading={busy} disabled={!canSwap}>
+      <Button type="submit" size="xl" block loading={busy} disabled={!canSwap}>
         {busy ? "Confirm in your wallet…" : "Swap"}
       </Button>
 

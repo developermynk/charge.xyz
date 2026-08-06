@@ -57,11 +57,11 @@ export function LandingHero() {
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <Button size="lg" onClick={() => setConnectOpen(true)}>
+            <Button size="xl" onClick={() => setConnectOpen(true)}>
               <Zap className="size-4" aria-hidden />
               Launch app
             </Button>
-            <Button size="lg" variant="secondary" asChild>
+            <Button size="xl" variant="secondary" asChild>
               <Link href="#features" className="inline-flex items-center gap-2">
                 See how it works
                 <ArrowRight className="size-4" aria-hidden />

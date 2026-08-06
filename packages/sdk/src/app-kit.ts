@@ -17,9 +17,10 @@
  */
 
 import { AppKit } from "@circle-fin/app-kit";
+import { createPublicClient, http } from "viem";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 
-import { ARC_SWAP_CHAIN } from "@charge/chains";
+import { arcTestnet, ARC_SWAP_CHAIN } from "@charge/chains";
 
 export interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] | object }): Promise<unknown>;
@@ -34,13 +35,6 @@ export function getAppKit(): AppKit {
 }
 
 /**
- * Build a user-controlled adapter from the connected wallet.
- *
- * `addressContext: 'user-controlled'` is deliberate: it makes passing an
- * explicit address a type error, so the SDK can only sign for whichever
- * account the wallet currently exposes.
- */
-/**
  * The adapter instance handed to App Kit.
  *
  * Typed as `unknown` at the package boundary on purpose: the concrete
@@ -52,6 +46,27 @@ export function getAppKit(): AppKit {
  */
 export type UserAdapter = unknown;
 
+/**
+ * The Arc RPC endpoint used for read operations.
+ *
+ * IMPORTANT: App Kit ships with built-in shared public RPC URLs. Those are
+ * rate-limited and frequently unavailable for Arc Testnet, which made swap
+ * quotes and bridge calls silently fail with a generic error. We pin our own
+ * node so reads are reliable. Override via NEXT_PUBLIC_ARC_RPC_URL if you
+ * self-host.
+ */
+const ARC_RPC =
+  process.env["NEXT_PUBLIC_ARC_RPC_URL"] || "https://arc-node.thecanteenapp.com";
+
+/**
+ * Build a user-controlled adapter from the connected wallet.
+ *
+ * `addressContext: 'user-controlled'` is deliberate: it makes passing an
+ * explicit address a type error, so the SDK can only sign for whichever
+ * account the wallet currently exposes. We also supply a custom public client
+ * pinned to our Arc RPC so balance/quote reads don't hit Circle's flaky shared
+ * endpoint.
+ */
 export async function getUserAdapter(
   provider: Eip1193Provider,
 ): Promise<UserAdapter> {
@@ -59,6 +74,15 @@ export async function getUserAdapter(
     // The SDK's EIP1193Provider type is structurally identical to ours.
     provider: provider as never,
     capabilities: { addressContext: "user-controlled" },
+    getPublicClient: ({ chain }) => {
+      const isArc =
+        "chainId" in chain &&
+        Number((chain as { chainId?: number }).chainId) === arcTestnet.id;
+      return createPublicClient({
+        chain: arcTestnet,
+        transport: http(isArc ? ARC_RPC : undefined),
+      });
+    },
   });
 }
 

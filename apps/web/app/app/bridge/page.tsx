@@ -17,7 +17,7 @@ export default function BridgePage() {
         </p>
       </header>
 
-      <Card className="p-6">
+      <Card className="p-6 sm:p-8">
         <BridgePanel />
       </Card>
     </div>
