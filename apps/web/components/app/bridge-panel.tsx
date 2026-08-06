@@ -188,7 +188,10 @@ export function BridgePanel() {
 
       {phase === "done" && (
         <StatusLine tone="success">
-          Bridge complete.{" "}
+          Burn confirmed on Arc. Your USDC is now minting on the destination —
+          that step finishes when Circle&apos;s attestation lands (usually 1–15
+          min). The burn shows as a transfer to the null address, which is
+          normal for CCTP.{" "}
           {txHash && (
             <a
               href={arcTxUrl(txHash)}
