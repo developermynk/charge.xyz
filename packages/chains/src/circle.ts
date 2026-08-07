@@ -63,7 +63,6 @@ export const BRIDGE_DESTINATIONS: readonly SwapChain[] = [
   { id: "Arbitrum_Sepolia", name: "Arbitrum Sepolia", testnet: true },
   { id: "Optimism_Sepolia", name: "OP Sepolia", testnet: true },
   { id: "Ethereum_Sepolia", name: "Ethereum Sepolia", testnet: true },
-  { id: "Polygon_Amoy", name: "Polygon Amoy", testnet: true },
   { id: "Avalanche_Fuji", name: "Avalanche Fuji", testnet: true },
 ] as const;
 
