@@ -13,9 +13,10 @@
  */
 
 import { AppKit } from "@circle-fin/app-kit";
+import { createPublicClient, http } from "viem";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 
-import { ARC_SWAP_CHAIN } from "@charge/chains";
+import { ARC_CHAIN_ID, ARC_SWAP_CHAIN } from "@charge/chains";
 
 export interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] | object }): Promise<unknown>;
@@ -44,19 +45,18 @@ export type UserAdapter = unknown;
 /**
  * Arc Testnet RPC override.
  *
- * App Kit already bundles the correct public RPC for every supported chain,
- * including `https://rpc.testnet.arc.network/` for Arc Testnet (verified:
- * returns chainId 5042002 and real balances). We only override it when an
- * operator wants to self-host via NEXT_PUBLIC_ARC_RPC_URL.
- *
- * We deliberately do NOT pass a custom `getPublicClient` to
- * `createViemAdapterFromProvider`. The official Arc / Circle bridge quickstart
- * calls it with just `{ provider }`, letting the SDK select the correct RPC
- * per chain. A previous build pinned `chain: arcTestnet` for every non-Arc
- * chain, which made the destination mint step simulate `receiveMessage`
- * against Arc's MessageTransmitterV2 (localDomain 26) instead of Base
- * Sepolia's (localDomain 6) — producing the "Invalid destination domain"
- * failure. Removing the override restores correct per-chain RPC selection.
+ * App Kit bundles a default public RPC per chain, but Arc Testnet's default is
+ * rate-limited / frequently unavailable — which is exactly what produced the
+ * email-login errors `{"code":-32005,"message":"rate limit exceeded"}` and
+ * `Network connection failed for Arc Testnet`. We therefore override
+ * `getPublicClient` to pin ONLY Arc to our reliable `rpc.testnet.arc.network/`
+ * (overridable via NEXT_PUBLIC_ARC_RPC_URL). Every other chain (Base Sepolia,
+ * Arbitrum Sepolia, OP Sepolia, …) is left to the SDK, which selects the correct
+ * RPC for that chain — this is what keeps the destination mint step's
+ * `receiveMessage` simulation on the right chain (fixing "Invalid destination
+ * domain"). The earlier bug pinned `chain: arcTestnet` for ALL chains, which
+ * broke the mint; here we only override the *transport URL for Arc*, while
+ * passing the SDK's own per-chain `chain` definition through untouched.
  */
 const ARC_RPC =
   process.env["NEXT_PUBLIC_ARC_RPC_URL"] || "https://rpc.testnet.arc.network/";
@@ -66,8 +66,13 @@ const ARC_RPC =
  *
  * `addressContext: 'user-controlled'` is deliberate: it makes passing an
  * explicit address a type error, so the SDK can only sign for whichever
- * account the wallet currently exposes. No `getPublicClient` override — the SDK
- * picks the right RPC for each chain (Arc, Base Sepolia, …) on its own.
+ * account the wallet currently exposes.
+ *
+ * Override `getPublicClient` so Arc reads hit our reliable RPC endpoint (the
+ * SDK default for Arc is rate-limited and fails for email/logic-sign-in users
+ * who have no wallet-supplied Arc RPC). For every other chain we return the SDK
+ * default client (correct per-chain RPC) — leaving the chain definition exactly
+ * as the SDK built it so the destination mint targets the right chain.
  */
 export async function getUserAdapter(
   provider: Eip1193Provider,
@@ -76,6 +81,15 @@ export async function getUserAdapter(
     // The SDK's EIP1193Provider type is structurally identical to ours.
     provider: provider as never,
     capabilities: { addressContext: "user-controlled" },
+    getPublicClient: ({ chain }) => {
+      const isArc =
+        "id" in chain && Number(chain.id) === ARC_CHAIN_ID;
+      return createPublicClient(
+        isArc
+          ? { chain, transport: http(ARC_RPC) }
+          : { chain, transport: http() },
+      );
+    },
   });
 }
 

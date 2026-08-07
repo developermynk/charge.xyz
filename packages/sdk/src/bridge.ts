@@ -164,6 +164,9 @@ export function humanizeBridgeError(err: unknown): string {
   if (msg.includes("attestation")) {
     return "Circle's attestation is taking longer than expected. Your USDC is safe — the mint will complete once attested.";
   }
+  if (msg.includes("network") || msg.includes("connection failed") || msg.includes("rate limit") || msg.includes("-32005")) {
+    return "Could not reach Arc's network just now. It may be rate-limited — wait a moment and try again. Your funds are never at risk.";
+  }
   if (msg.includes("unsupported") || msg.includes("route")) {
     return "That bridge route is not supported yet.";
   }
