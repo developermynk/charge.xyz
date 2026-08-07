@@ -13,7 +13,7 @@ import {
   TxProgress,
   type StepState,
 } from "@charge/ui";
-import { arcTxUrl, ARC_SWAP_CHAIN, BRIDGE_DESTINATIONS } from "@charge/chains";
+import { arcTxUrl, ARC_SWAP_CHAIN, BRIDGE_DESTINATIONS, BRIDGE_CHAIN_META } from "@charge/chains";
 import {
   BRIDGE_STAGES,
   executeBridge,
@@ -76,6 +76,31 @@ export function BridgePanel() {
     return "pending";
   }
 
+  /** Proactively add the destination chain to the wallet so the mint step's
+   *  `wallet_switchEthereumChain` doesn't fail with "Unrecognized chain ID".
+   *  Base Sepolia ships pre-added; OP/Aribtrum/Polygon/Amoy/Fuji are not, which
+   *  is why those bridges failed at the mint step. */
+  async function ensureDestinationChain(chainId: string) {
+    const meta = BRIDGE_CHAIN_META[chainId];
+    if (!meta) return;
+    try {
+      const provider = await getProvider();
+      if (!provider?.request) return;
+      await provider.request({
+        method: "wallet_addEthereumChain",
+        params: [meta.addParams],
+      });
+    } catch {
+      // User dismissed the add prompt, or chain already existed — the SDK's own
+      // switch will surface a real error if it genuinely can't proceed.
+    }
+  }
+
+  function onSelectDestination(value: string) {
+    setToChain(value);
+    void ensureDestinationChain(value);
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit || !address) return;
@@ -88,6 +113,10 @@ export function BridgePanel() {
     try {
       const provider = await getProvider();
       if (!provider) throw new Error("No wallet provider available.");
+
+      // Ensure the destination is added to the wallet before the mint step needs
+      // to switch to it (prevents "Unrecognized chain ID" at the mint step).
+      await ensureDestinationChain(toChain);
 
       const result = await executeBridge(
         {
@@ -147,7 +176,7 @@ export function BridgePanel() {
             <select
               id="to-chain"
               value={toChain}
-              onChange={(e) => setToChain(e.target.value)}
+              onChange={(e) => onSelectDestination(e.target.value)}
               className="h-[58px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-fg outline-none transition-colors focus-visible:border-charge/50 focus-visible:ring-2 focus-visible:ring-charge/25"
             >
               {BRIDGE_DESTINATIONS.map((c) => (
@@ -231,9 +260,10 @@ export function BridgePanel() {
                   {s.txHash && (
                     <a
                       href={
-                        s.name.toLowerCase().includes("mint")
-                          ? `https://sepolia.basescan.org/tx/${s.txHash}`
-                          : arcTxUrl(s.txHash)
+                        s.explorerUrl ??
+                        (s.name.toLowerCase().includes("mint")
+                          ? `${BRIDGE_CHAIN_META[toChain]?.explorerBase ?? "https://sepolia.basescan.org"}/tx/${s.txHash}`
+                          : arcTxUrl(s.txHash))
                       }
                       target="_blank"
                       rel="noopener noreferrer"
@@ -255,7 +285,7 @@ export function BridgePanel() {
             <>
               Bridge complete — your USDC was minted on the destination.{" "}
               <a
-                href={`https://sepolia.basescan.org/tx/${destinationTxHash}`}
+                href={`${BRIDGE_CHAIN_META[toChain]?.explorerBase ?? "https://sepolia.basescan.org"}/tx/${destinationTxHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 underline underline-offset-2"

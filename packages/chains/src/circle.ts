@@ -67,6 +67,137 @@ export const BRIDGE_DESTINATIONS: readonly SwapChain[] = [
   { id: "Avalanche_Fuji", name: "Avalanche Fuji", testnet: true },
 ] as const;
 
+/**
+ * EVM network params for each bridge destination, used to (a) open the correct
+ * block explorer for destination transactions and (b) pre-add the chain to the
+ * user's wallet so the mint step's `wallet_switchEthereumChain` doesn't fail
+ * with "Unrecognized chain ID".
+ *
+ * Without `addParams`, OP Sepolia / Arbitrum Sepolia etc. are not in MetaMask by
+ * default, so the destination mint would throw
+ * `Failed to switch to chain ... Unrecognized chain ID`. Base Sepolia ships
+ * pre-added, which is why it "just worked". We add every destination on select.
+ */
+export interface BridgeChainMeta {
+  /** Hex chain id, e.g. "0xaa37dc". */
+  chainId: string;
+  /** Decimal chain id, e.g. 11155420. */
+  chainIdNum: number;
+  chainName: string;
+  nativeCurrency: { name: string; symbol: string; decimals: number };
+  rpcUrls: string[];
+  blockExplorerUrls: string[];
+  /** Base URL for building /tx/ links. */
+  explorerBase: string;
+  /** Params for `wallet_addEthereumChain`. */
+  addParams: {
+    chainId: string;
+    chainName: string;
+    nativeCurrency: { name: string; symbol: string; decimals: number };
+    rpcUrls: string[];
+    blockExplorerUrls: string[];
+  };
+}
+
+export const BRIDGE_CHAIN_META: Record<string, BridgeChainMeta> = {
+  Base_Sepolia: {
+    chainId: "0x14a44",
+    chainIdNum: 84532,
+    chainName: "Base Sepolia",
+    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://sepolia.base.org"],
+    blockExplorerUrls: ["https://sepolia.basescan.org"],
+    explorerBase: "https://sepolia.basescan.org",
+    addParams: {
+      chainId: "0x14a44",
+      chainName: "Base Sepolia",
+      nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+      rpcUrls: ["https://sepolia.base.org"],
+      blockExplorerUrls: ["https://sepolia.basescan.org"],
+    },
+  },
+  Arbitrum_Sepolia: {
+    chainId: "0x66eee",
+    chainIdNum: 421614,
+    chainName: "Arbitrum Sepolia",
+    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://sepolia-rollup.arbitrum.io/rpc"],
+    blockExplorerUrls: ["https://sepolia.arbiscan.io"],
+    explorerBase: "https://sepolia.arbiscan.io",
+    addParams: {
+      chainId: "0x66eee",
+      chainName: "Arbitrum Sepolia",
+      nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+      rpcUrls: ["https://sepolia-rollup.arbitrum.io/rpc"],
+      blockExplorerUrls: ["https://sepolia.arbiscan.io"],
+    },
+  },
+  Optimism_Sepolia: {
+    chainId: "0xaa37dc",
+    chainIdNum: 11155420,
+    chainName: "OP Sepolia",
+    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://sepolia.optimism.io"],
+    blockExplorerUrls: ["https://sepolia-optimism.etherscan.io"],
+    explorerBase: "https://sepolia-optimism.etherscan.io",
+    addParams: {
+      chainId: "0xaa37dc",
+      chainName: "OP Sepolia",
+      nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+      rpcUrls: ["https://sepolia.optimism.io"],
+      blockExplorerUrls: ["https://sepolia-optimism.etherscan.io"],
+    },
+  },
+  Ethereum_Sepolia: {
+    chainId: "0xaa36a7",
+    chainIdNum: 11155111,
+    chainName: "Sepolia",
+    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://rpc.sepolia.org"],
+    blockExplorerUrls: ["https://sepolia.etherscan.io"],
+    explorerBase: "https://sepolia.etherscan.io",
+    addParams: {
+      chainId: "0xaa36a7",
+      chainName: "Sepolia",
+      nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+      rpcUrls: ["https://rpc.sepolia.org"],
+      blockExplorerUrls: ["https://sepolia.etherscan.io"],
+    },
+  },
+  Polygon_Amoy: {
+    chainId: "0x13882",
+    chainIdNum: 80002,
+    chainName: "Polygon Amoy",
+    nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
+    rpcUrls: ["https://rpc-amoy.polygon.technology"],
+    blockExplorerUrls: ["https://amoy.polygonscan.com"],
+    explorerBase: "https://amoy.polygonscan.com",
+    addParams: {
+      chainId: "0x13882",
+      chainName: "Polygon Amoy",
+      nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
+      rpcUrls: ["https://rpc-amoy.polygon.technology"],
+      blockExplorerUrls: ["https://amoy.polygonscan.com"],
+    },
+  },
+  Avalanche_Fuji: {
+    chainId: "0xa869",
+    chainIdNum: 43113,
+    chainName: "Avalanche Fuji",
+    nativeCurrency: { name: "AVAX", symbol: "AVAX", decimals: 18 },
+    rpcUrls: ["https://api.avax-test.network/ext/bc/C/rpc"],
+    blockExplorerUrls: ["https://testnet.snowtrace.io"],
+    explorerBase: "https://testnet.snowtrace.io",
+    addParams: {
+      chainId: "0xa869",
+      chainName: "Avalanche Fuji",
+      nativeCurrency: { name: "AVAX", symbol: "AVAX", decimals: 18 },
+      rpcUrls: ["https://api.avax-test.network/ext/bc/C/rpc"],
+      blockExplorerUrls: ["https://testnet.snowtrace.io"],
+    },
+  },
+};
+
 /** Tokens swappable on a given chain. Arc Testnet is restricted. */
 export function tokensForChain(chainId: string): readonly string[] {
   if (chainId === ARC_SWAP_CHAIN) return ARC_SWAP_TOKENS;
