@@ -96,7 +96,17 @@ export async function executeBridge(
     onStage?.("approve");
     const raw = (await getAppKit().bridge({
       from: { adapter: adapter as never, chain: req.fromChain as never },
-      to: { adapter: adapter as never, chain: req.toChain as never },
+      // useForwarder lets Circle's relayer submit the destination mint, so the
+      // user's wallet does not need to sign on the destination chain. This is
+      // what makes the email (embedded-wallet) path work: the embedded wallet
+      // cannot switch to / sign on Base Sepolia, so without the forwarder the
+      // burn succeeds but the mint never lands. The wallet path still works —
+      // it simply uses the relayer for the mint step.
+      to: {
+        adapter: adapter as never,
+        chain: req.toChain as never,
+        useForwarder: true,
+      },
       amount: req.amount,
       token: "USDC",
     } as never)) as {
