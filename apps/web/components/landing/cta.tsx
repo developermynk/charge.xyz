@@ -1,15 +1,10 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import * as React from "react";
 
-import { Button } from "@charge/ui";
-
-import { ConnectModal } from "@/components/connect-modal";
+import { LaunchAppButton } from "@/components/connect-modal";
 
 export function LandingCta() {
-  const [open, setOpen] = React.useState(false);
-
   return (
     <section className="relative overflow-hidden py-24 sm:py-32">
       <div className="mx-auto max-w-6xl px-6">
@@ -31,15 +26,13 @@ export function LandingCta() {
             No extension, no seed phrase, no gas token. Just USDC on Arc.
           </p>
           <div className="mt-9 flex justify-center">
-            <Button size="lg" onClick={() => setOpen(true)}>
+            <LaunchAppButton size="lg">
               Launch Charge
               <ArrowRight className="size-4" aria-hidden />
-            </Button>
+            </LaunchAppButton>
           </div>
         </div>
       </div>
-
-      <ConnectModal open={open} onClose={() => setOpen(false)} />
     </section>
   );
 }

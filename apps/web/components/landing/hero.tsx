@@ -2,11 +2,10 @@
 
 import { ArrowRight, Zap } from "lucide-react";
 import Link from "next/link";
-import * as React from "react";
 
 import { Badge, Button } from "@charge/ui";
 
-import { ConnectModal } from "@/components/connect-modal";
+import { LaunchAppButton } from "@/components/connect-modal";
 
 /**
  * Hero.
@@ -15,8 +14,6 @@ import { ConnectModal } from "@/components/connect-modal";
  * rather than generic "fast, secure, decentralized" filler that says nothing.
  */
 export function LandingHero() {
-  const [connectOpen, setConnectOpen] = React.useState(false);
-
   return (
     <section className="relative isolate overflow-hidden pt-32 pb-24 sm:pt-40 sm:pb-32">
       {/* Ambient field */}
@@ -57,10 +54,10 @@ export function LandingHero() {
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <Button size="xl" onClick={() => setConnectOpen(true)}>
+            <LaunchAppButton size="xl">
               <Zap className="size-4" aria-hidden />
               Launch app
-            </Button>
+            </LaunchAppButton>
             <Button size="xl" variant="secondary" asChild>
               <Link href="#features" className="inline-flex items-center gap-2">
                 See how it works
@@ -89,8 +86,20 @@ export function LandingHero() {
         </div>
       </div>
 
-      <ConnectModal open={connectOpen} onClose={() => setConnectOpen(false)} />
-    </section>
+      {/* Product preview */}
+      <div className="relative mx-auto mt-20 max-w-4xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
+        <div className="glass-strong rounded-3xl p-2 shadow-[0_40px_120px_-20px_rgba(0,0,0,0.95)]">
+          <div className="rounded-[20px] border border-white/[0.06] bg-elevated/80 p-6 sm:p-8">
+            <HeroPreview />
+          </div>
+        </div>
+        {/* Reflected glow under the panel */}
+        <div
+          className="absolute -bottom-8 left-1/2 h-24 w-3/4 -translate-x-1/2 rounded-full bg-charge/20 blur-[60px]"
+          aria-hidden
+        />
+      </div>
+      </section>
   );
 }
 

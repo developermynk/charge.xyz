@@ -4,6 +4,7 @@ import { Mail, Wallet, ChevronRight, ShieldCheck } from "lucide-react";
 import * as React from "react";
 
 import { Button, Modal, StatusLine } from "@charge/ui";
+import Link from "next/link";
 import {
   isPrivyConfigured,
   useConnect,
@@ -215,6 +216,51 @@ export function useConnectModal() {
   };
 }
 
+export function LaunchAppButton({
+  size = "md",
+  block,
+  label = "Launch app",
+  className,
+  children,
+}: {
+  size?: "sm" | "md" | "lg" | "xl" | "icon";
+  block?: boolean;
+  label?: string;
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  const { open, openModal, closeModal } = useConnectModal();
+  const { isConnected } = useWallet();
+
+  // Already signed in? Go straight into the dapp — don't reopen the connect
+  // modal (which auto-closes when connected, making the click feel dead).
+  if (isConnected) {
+    return (
+      <Button
+        size={size}
+        block={block}
+        className={className}
+        asChild
+      >
+        <Link href="/app">{children ?? label}</Link>
+      </Button>
+    );
+  }
+
+  return (
+    <>
+      <Button
+        size={size}
+        block={block}
+        className={className}
+        onClick={openModal}
+      >
+        {children ?? label}
+      </Button>
+      <ConnectModal open={open} onClose={closeModal} />
+    </>
+  );
+}
 export function ConnectButton({
   size = "md",
   block,

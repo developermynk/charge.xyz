@@ -6,7 +6,7 @@ import * as React from "react";
 
 import { Button } from "@charge/ui";
 
-import { ConnectModal } from "@/components/connect-modal";
+import { LaunchAppButton } from "@/components/connect-modal";
 import { ChargeLogo } from "@/components/logo";
 
 const LINKS = [
@@ -18,7 +18,6 @@ const LINKS = [
 export function LandingNav() {
   const [scrolled, setScrolled] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  const [connectOpen, setConnectOpen] = React.useState(false);
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -64,9 +63,9 @@ export function LandingNav() {
           </div>
 
           <div className="hidden md:block">
-            <Button size="sm" onClick={() => setConnectOpen(true)}>
+            <LaunchAppButton size="sm">
               Launch app
-            </Button>
+            </LaunchAppButton>
           </div>
 
           <button
@@ -97,22 +96,16 @@ export function LandingNav() {
                   {l.label}
                 </a>
               ))}
-              <Button
+              <LaunchAppButton
                 size="sm"
                 block
-                onClick={() => {
-                  setMobileOpen(false);
-                  setConnectOpen(true);
-                }}
               >
                 Launch app
-              </Button>
+              </LaunchAppButton>
             </div>
           </div>
         )}
       </header>
-
-      <ConnectModal open={connectOpen} onClose={() => setConnectOpen(false)} />
     </>
   );
 }
