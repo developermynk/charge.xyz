@@ -163,22 +163,6 @@ export const BRIDGE_CHAIN_META: Record<string, BridgeChainMeta> = {
       blockExplorerUrls: ["https://sepolia.etherscan.io"],
     },
   },
-  Polygon_Amoy: {
-    chainId: "0x13882",
-    chainIdNum: 80002,
-    chainName: "Polygon Amoy",
-    nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
-    rpcUrls: ["https://rpc-amoy.polygon.technology"],
-    blockExplorerUrls: ["https://amoy.polygonscan.com"],
-    explorerBase: "https://amoy.polygonscan.com",
-    addParams: {
-      chainId: "0x13882",
-      chainName: "Polygon Amoy",
-      nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
-      rpcUrls: ["https://rpc-amoy.polygon.technology"],
-      blockExplorerUrls: ["https://amoy.polygonscan.com"],
-    },
-  },
   Avalanche_Fuji: {
     chainId: "0xa869",
     chainIdNum: 43113,
