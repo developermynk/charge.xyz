@@ -10,17 +10,12 @@
  * EIP-1193 provider via `createViemAdapterFromProvider`, using the
  * `user-controlled` capability so the SDK refuses an explicit address and can
  * only ever act for the connected account.
- *
- * Signatures verified against the installed packages:
- *   @circle-fin/adapter-viem-v2@1.14.0 — createViemAdapterFromProvider({ provider, capabilities })
- *   @circle-fin/app-kit@1.10.0        — kit.swap/estimateSwap/bridge/estimateBridge
  */
 
 import { AppKit } from "@circle-fin/app-kit";
-import { createPublicClient, http } from "viem";
 import { createViemAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 
-import { arcTestnet, ARC_SWAP_CHAIN } from "@charge/chains";
+import { ARC_SWAP_CHAIN } from "@charge/chains";
 
 export interface Eip1193Provider {
   request(args: { method: string; params?: unknown[] | object }): Promise<unknown>;
@@ -47,25 +42,32 @@ export function getAppKit(): AppKit {
 export type UserAdapter = unknown;
 
 /**
- * The Arc RPC endpoint used for read operations.
+ * Arc Testnet RPC override.
  *
- * IMPORTANT: App Kit ships with built-in shared public RPC URLs. Those are
- * rate-limited and frequently unavailable for Arc Testnet, which made swap
- * quotes and bridge calls silently fail with a generic error. We pin our own
- * node so reads are reliable. Override via NEXT_PUBLIC_ARC_RPC_URL if you
- * self-host.
+ * App Kit already bundles the correct public RPC for every supported chain,
+ * including `https://rpc.testnet.arc.network/` for Arc Testnet (verified:
+ * returns chainId 5042002 and real balances). We only override it when an
+ * operator wants to self-host via NEXT_PUBLIC_ARC_RPC_URL.
+ *
+ * We deliberately do NOT pass a custom `getPublicClient` to
+ * `createViemAdapterFromProvider`. The official Arc / Circle bridge quickstart
+ * calls it with just `{ provider }`, letting the SDK select the correct RPC
+ * per chain. A previous build pinned `chain: arcTestnet` for every non-Arc
+ * chain, which made the destination mint step simulate `receiveMessage`
+ * against Arc's MessageTransmitterV2 (localDomain 26) instead of Base
+ * Sepolia's (localDomain 6) — producing the "Invalid destination domain"
+ * failure. Removing the override restores correct per-chain RPC selection.
  */
 const ARC_RPC =
-  process.env["NEXT_PUBLIC_ARC_RPC_URL"] || "https://arc-node.thecanteenapp.com";
+  process.env["NEXT_PUBLIC_ARC_RPC_URL"] || "https://rpc.testnet.arc.network/";
 
 /**
  * Build a user-controlled adapter from the connected wallet.
  *
  * `addressContext: 'user-controlled'` is deliberate: it makes passing an
  * explicit address a type error, so the SDK can only sign for whichever
- * account the wallet currently exposes. We also supply a custom public client
- * pinned to our Arc RPC so balance/quote reads don't hit Circle's flaky shared
- * endpoint.
+ * account the wallet currently exposes. No `getPublicClient` override — the SDK
+ * picks the right RPC for each chain (Arc, Base Sepolia, …) on its own.
  */
 export async function getUserAdapter(
   provider: Eip1193Provider,
@@ -74,15 +76,6 @@ export async function getUserAdapter(
     // The SDK's EIP1193Provider type is structurally identical to ours.
     provider: provider as never,
     capabilities: { addressContext: "user-controlled" },
-    getPublicClient: ({ chain }) => {
-      const isArc =
-        "chainId" in chain &&
-        Number((chain as { chainId?: number }).chainId) === arcTestnet.id;
-      return createPublicClient({
-        chain: arcTestnet,
-        transport: http(isArc ? ARC_RPC : undefined),
-      });
-    },
   });
 }
 
