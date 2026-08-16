@@ -40,7 +40,7 @@ export function TxProgress({ steps }: { steps: readonly TxStep[] }) {
                   step.state === "active" &&
                     "border-charge/50 bg-charge/10 text-charge",
                   step.state === "pending" &&
-                    "border-white/10 bg-white/[0.03] text-fg-tertiary",
+                    "border-fg/10 bg-fg/[0.03] text-fg-tertiary",
                   step.state === "error" &&
                     "border-danger/40 bg-danger/15 text-danger",
                 )}
@@ -60,13 +60,13 @@ export function TxProgress({ steps }: { steps: readonly TxStep[] }) {
                 <span
                   className={cn(
                     "w-px flex-1 transition-colors duration-300",
-                    step.state === "done" ? "bg-charge/30" : "bg-white/8",
+                    step.state === "done" ? "bg-charge/30" : "bg-fg/8",
                   )}
                 />
               )}
             </div>
 
-            <div className={cn("pb-5", last && "pb-0")}>
+            <div className={cn("flex items-center justify-between gap-3 pb-5", last && "pb-0")}>
               <p
                 className={cn(
                   "text-sm leading-7",
@@ -79,7 +79,7 @@ export function TxProgress({ steps }: { steps: readonly TxStep[] }) {
                 {step.label}
               </p>
               {step.detail && (
-                <div className="mt-0.5 text-xs text-fg-tertiary">{step.detail}</div>
+                <span className="shrink-0 text-xs text-fg-tertiary">{step.detail}</span>
               )}
             </div>
           </li>
@@ -103,7 +103,7 @@ export function StatusLine({
       aria-live="polite"
       className={cn(
         "rounded-xl border px-3.5 py-2.5 text-sm",
-        tone === "info" && "border-white/10 bg-white/[0.03] text-fg-secondary",
+        tone === "info" && "border-fg/10 bg-fg/[0.03] text-fg-secondary",
         tone === "success" && "border-charge/25 bg-charge/10 text-charge",
         tone === "warning" && "border-warning/25 bg-warning/10 text-warning",
         tone === "danger" && "border-danger/25 bg-danger/10 text-danger",

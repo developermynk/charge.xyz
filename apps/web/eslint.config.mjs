@@ -39,6 +39,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored third-party libs (three.js, vanta.fog) are minified blobs that
+    // fail lint rules we don't control. Serve them, don't lint them.
+    "public/vendor/**",
   ]),
 ]);
 

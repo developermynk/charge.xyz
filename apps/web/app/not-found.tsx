@@ -14,7 +14,7 @@ export default function NotFound() {
         aria-hidden
       />
       <div className="text-center">
-        <p className="text-7xl font-semibold tabular-nums text-white/[0.08]">
+        <p className="text-7xl font-semibold tabular-nums text-fg/[0.08]">
           404
         </p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">

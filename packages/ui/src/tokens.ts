@@ -9,39 +9,39 @@
  *   palette focus  : dark tech base + trust + vibrant accent
  *
  * Charge's own reading of that: the product's one idea is that your money is
- * also your gas. So the accent is an electric "charged" green used ONLY for
- * live/positive/actionable state, and USDC's own blue carries trust.
+ * also your gas. So the accent is an electric "charged" purple used ONLY for
+ * action/positive state, and a soft lavender carries links + secondary emphasis.
  */
 
 export const colors = {
   /* Base — true OLED black so the glass panels read as lit surfaces. */
-  bg: "#08090C",
-  bgElevated: "#0E1015",
-  bgPanel: "#12141B",
-  bgHover: "#181B24",
+  bg: "#0E100F",
+  bgElevated: "#15131C",
+  bgPanel: "#17141F",
+  bgHover: "#1E1B29",
 
-  /* Charge green — the accent. Reserved for action + positive state. */
-  primary: "#00E58A",
-  primaryHover: "#22F5A0",
-  primaryMuted: "rgba(0, 229, 138, 0.12)",
-  primaryGlow: "rgba(0, 229, 138, 0.35)",
+  /* Charge purple — the accent. Reserved for action + positive state. */
+  primary: "#6E54FF",
+  primaryHover: "#836EF9",
+  primaryMuted: "rgba(110, 84, 255, 0.14)",
+  primaryGlow: "rgba(110, 84, 255, 0.4)",
 
-  /* USDC blue — trust, links, secondary emphasis. */
-  accent: "#2775CA",
-  accentHover: "#3B8AE0",
-  accentMuted: "rgba(39, 117, 202, 0.14)",
+  /* Lavender — links, secondary emphasis. */
+  accent: "#B8B4FE",
+  accentHover: "#CDBCFF",
+  accentMuted: "rgba(184, 180, 254, 0.14)",
 
   /* Semantic. */
-  success: "#00E58A",
+  success: "#22F5A0",
   warning: "#FFB020",
   danger: "#FF4D4D",
   dangerMuted: "rgba(255, 77, 77, 0.12)",
 
   /* Text ramp — AA contrast on bg at every step. */
-  text: "#F2F4F8",
-  textSecondary: "#9BA3B4",
-  textTertiary: "#5F6878",
-  textDisabled: "#3A4150",
+  text: "#F5F5F7",
+  textSecondary: "#A3A3AD",
+  textTertiary: "#6E6E78",
+  textDisabled: "#3A3A44",
 
   /* Lines + glass. */
   border: "rgba(255, 255, 255, 0.08)",

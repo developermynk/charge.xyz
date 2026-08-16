@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowRight, ExternalLink, Network } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -11,9 +11,20 @@ import {
   Label,
   StatusLine,
   TxProgress,
+  cn,
   type StepState,
 } from "@charge/ui";
-import { arcTxUrl, ARC_SWAP_CHAIN, BRIDGE_DESTINATIONS, BRIDGE_CHAIN_META } from "@charge/chains";
+import {
+  ARC_SWAP_CHAIN,
+  SWAP_CHAINS,
+  SWAP_CHAINS_EVM,
+  USDC_CONTRACTS,
+  ARC_CHAIN_ID,
+  arcTxUrl,
+  bridgeAddParams,
+  bridgeExplorer,
+  swapChainNumericId,
+} from "@charge/chains";
 import {
   BRIDGE_STAGES,
   executeBridge,
@@ -21,47 +32,89 @@ import {
   type BridgeStageId,
   type BridgeStepInfo,
 } from "@charge/sdk";
-import { useArcBalance, useWallet } from "@charge/web3";
+import { useWallet, useChainBalance } from "@charge/web3";
 
 type Phase = "idle" | "running" | "done" | "error";
 
-export function BridgePanel() {
-  const { address, getProvider, isOnArc } = useWallet();
-  const balance = useArcBalance(address);
+/**
+ * Bridge directions Circle's testnet CCTP actually supports (empirically
+ * verified against @circle-fin/app-kit@1.11.0 in the charge-cctp-bridge-debug
+ * skill). The SDK's BridgeChain enum *parses* many testnet pairs, but only
+ * these reach the signing stage on testnet. Everything else throws
+ * "That bridge route is not supported yet" from the SDK — we surface that
+ * honestly up-front instead of letting the burn start and fail.
+ */
+const BRIDGE_ROUTES_VERIFIED: ReadonlyArray<[string, string]> = [
+  // Arc Testnet -> other testnets (verified live).
+  ["Arc_Testnet", "Base_Sepolia"],
+  ["Arc_Testnet", "Arbitrum_Sepolia"],
+  ["Arc_Testnet", "Optimism_Sepolia"],
+  ["Arc_Testnet", "Ethereum_Sepolia"],
+  ["Arc_Testnet", "Avalanche_Fuji"],
+  // Other testnets -> Arc Testnet (verified live: estimateBridge returns a
+  // valid quote for Base_Sepolia / Arbitrum_Sepolia -> Arc_Testnet).
+  ["Base_Sepolia", "Arc_Testnet"],
+  ["Arbitrum_Sepolia", "Arc_Testnet"],
+  ["Optimism_Sepolia", "Arc_Testnet"],
+  ["Ethereum_Sepolia", "Arc_Testnet"],
+  ["Avalanche_Fuji", "Arc_Testnet"],
+];
 
-  const [toChain, setToChain] = React.useState<string>(
-    BRIDGE_DESTINATIONS[0]?.id ?? "",
-  );
+const routeUnsupported = (from: string, to: string) =>
+  !BRIDGE_ROUTES_VERIFIED.some(([f, t]) => f === from && t === to);
+
+const chainName = (sdkId: string) =>
+  SWAP_CHAINS.find((c) => c.id === sdkId)?.name ?? sdkId;
+
+export function BridgePanel() {
+  const { address, getProvider, chainId, switchChain, isConnected } =
+    useWallet();
+
+  const [fromChain, setFromChain] = React.useState<string>(ARC_SWAP_CHAIN);
+  const [toChain, setToChain] = React.useState<string>("Base_Sepolia");
   const [amount, setAmount] = React.useState("");
   const [phase, setPhase] = React.useState<Phase>("idle");
   const [stage, setStage] = React.useState<BridgeStageId | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [txHash, setTxHash] = React.useState<string | null>(null);
-  const [destinationTxHash, setDestinationTxHash] = React.useState<string | null>(null);
+  const [destinationTxHash, setDestinationTxHash] = React.useState<string | null>(
+    null,
+  );
   const [steps, setSteps] = React.useState<BridgeStepInfo[]>([]);
+
+  // Source-chain USDC balance (generic — works for any chain, not just Arc).
+  const fromNumeric = swapChainNumericId(fromChain);
+  const balance = useChainBalance({
+    chainId: fromNumeric ?? ARC_CHAIN_ID,
+    address,
+    usdcAddress: USDC_CONTRACTS[fromChain],
+    sdkId: fromChain,
+  });
+  const sourceBalance = balance.usdcFormatted ?? "0";
+
+  const fromSwitchId = swapChainNumericId(fromChain);
+  const needsFromSwitch =
+    fromSwitchId !== undefined && chainId !== fromSwitchId;
+  const sameChain = fromChain === toChain;
 
   const amountNum = Number(amount);
   const amountError =
     amount.length > 0 && (!Number.isFinite(amountNum) || amountNum <= 0)
       ? "Enter an amount greater than zero."
-      : amount.length > 0 && amountNum > Number(balance.usdcFormatted)
-        ? `Exceeds your balance of ${balance.usdcFormatted}.`
+      : amount.length > 0 && amountNum > Number(sourceBalance)
+        ? `Exceeds your balance of ${sourceBalance}.`
         : null;
 
   const canSubmit =
-    isOnArc &&
+    isConnected &&
     amount.length > 0 &&
     !amountError &&
+    Boolean(fromChain) &&
     Boolean(toChain) &&
+    !sameChain &&
+    !routeUnsupported(fromChain, toChain) &&
     phase !== "running";
 
-  /**
-   * Map the SDK's current stage onto per-step UI state.
-   *
-   * CCTP takes minutes because of Circle's attestation wait, so showing named
-   * steps is not decoration — a single spinner for that long reads as a hang
-   * and makes people close the tab mid-transfer.
-   */
   function stateFor(id: BridgeStageId): StepState {
     if (phase === "done") return "done";
     if (!stage) return "pending";
@@ -76,29 +129,44 @@ export function BridgePanel() {
     return "pending";
   }
 
-  /** Proactively add the destination chain to the wallet so the mint step's
-   *  `wallet_switchEthereumChain` doesn't fail with "Unrecognized chain ID".
-   *  Base Sepolia ships pre-added; OP/Aribtrum/Polygon/Amoy/Fuji are not, which
-   *  is why those bridges failed at the mint step. */
-  async function ensureDestinationChain(chainId: string) {
-    const meta = BRIDGE_CHAIN_META[chainId];
-    if (!meta) return;
+  async function ensureChain(chainSdkId: string) {
+    const numeric = swapChainNumericId(chainSdkId);
+    if (numeric === undefined || chainId === numeric) return;
     try {
       const provider = await getProvider();
       if (!provider?.request) return;
-      await provider.request({
-        method: "wallet_addEthereumChain",
-        params: [meta.addParams],
-      });
+      const params = bridgeAddParams(chainSdkId);
+      if (params) {
+        await provider.request({
+          method: "wallet_addEthereumChain",
+          params: [params],
+        });
+      }
+      await switchChain(numeric);
     } catch {
-      // User dismissed the add prompt, or chain already existed — the SDK's own
+      // User dismissed the prompt or chain already exists — the SDK's own
       // switch will surface a real error if it genuinely can't proceed.
     }
   }
 
-  function onSelectDestination(value: string) {
+  function onSelectFrom(value: string) {
+    setFromChain(value);
+    if (value === toChain) {
+      // Pick a different default destination so we never bridge to self.
+      const alt = SWAP_CHAINS_EVM.find((c) => c.id !== value);
+      if (alt) setToChain(alt.id);
+    }
+  }
+
+  function onSelectTo(value: string) {
     setToChain(value);
-    void ensureDestinationChain(value);
+    void ensureChain(value);
+  }
+
+  function onFlip() {
+    setFromChain(toChain);
+    setToChain(fromChain);
+    void ensureChain(toChain);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -107,6 +175,7 @@ export function BridgePanel() {
 
     setError(null);
     setTxHash(null);
+    setDestinationTxHash(null);
     setStage("approve");
     setPhase("running");
 
@@ -114,23 +183,19 @@ export function BridgePanel() {
       const provider = await getProvider();
       if (!provider) throw new Error("No wallet provider available.");
 
-      // Ensure the destination is added to the wallet before the mint step needs
-      // to switch to it (prevents "Unrecognized chain ID" at the mint step).
-      await ensureDestinationChain(toChain);
+      // Make sure the wallet is on the source chain before the burn.
+      await ensureChain(fromChain);
 
       const result = await executeBridge(
         {
           provider,
-          fromChain: ARC_SWAP_CHAIN,
+          fromChain,
           toChain,
           amount,
         },
         (s) => setStage(s),
       );
 
-      // BridgeResult.state is the authoritative outcome: 'success' only after
-      // the destination mint lands. Surface pending/error honestly instead of
-      // always reporting success (which previously hid a failed mint).
       setTxHash(result.txHash ?? null);
       setDestinationTxHash(result.destinationTxHash ?? null);
       setSteps(result.steps);
@@ -145,8 +210,6 @@ export function BridgePanel() {
         );
         setPhase("error");
       } else {
-        // Pending — relayer/mint still settling. Keep the running UI but mark
-        // the burn done so the user sees progress.
         setStage("mint");
         setPhase("done");
       }
@@ -158,33 +221,72 @@ export function BridgePanel() {
     }
   }
 
+  const fromExplorer = bridgeExplorer(fromChain);
+
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      {/* Route */}
+      {/* Route: source + destination are both selectable. */}
       <div>
         <Label>Route</Label>
         <div className="mt-2 flex items-center gap-3">
-          <div className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-            <span className="block text-xs text-fg-tertiary">From</span>
-            <span className="mt-0.5 block font-medium text-fg">Arc Testnet</span>
+          <div className="flex-1">
+            <label htmlFor="from-chain" className="sr-only">
+              Source chain
+            </label>
+            <div className="relative">
+              <Network className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
+              <select
+                id="from-chain"
+                value={fromChain}
+                onChange={(e) => onSelectFrom(e.target.value)}
+                className="h-[58px] w-full rounded-xl border border-fg/10 bg-fg/[0.03] pl-9 pr-4 text-fg outline-none transition-colors focus-visible:border-charge/50 focus-visible:ring-2 focus-visible:ring-charge/25"
+              >
+                {SWAP_CHAINS_EVM.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-elevated">
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <span className="mt-1 block pl-1 text-xs text-fg-tertiary">
+              From · {chainName(fromChain)}
+            </span>
           </div>
-          <ArrowRight className="size-4 shrink-0 text-fg-tertiary" aria-hidden />
+
+          <button
+            type="button"
+            onClick={onFlip}
+            aria-label="Swap route direction"
+            className={cn(
+              "mt-5 rounded-xl border border-fg/10 bg-fg/[0.03] p-2.5",
+              "transition hover:bg-fg/[0.07] active:scale-95",
+            )}
+          >
+            <ArrowRight className="size-4" aria-hidden />
+          </button>
+
           <div className="flex-1">
             <label htmlFor="to-chain" className="sr-only">
               Destination chain
             </label>
-            <select
-              id="to-chain"
-              value={toChain}
-              onChange={(e) => onSelectDestination(e.target.value)}
-              className="h-[58px] w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-fg outline-none transition-colors focus-visible:border-charge/50 focus-visible:ring-2 focus-visible:ring-charge/25"
-            >
-              {BRIDGE_DESTINATIONS.map((c) => (
-                <option key={c.id} value={c.id} className="bg-elevated">
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <Network className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
+              <select
+                id="to-chain"
+                value={toChain}
+                onChange={(e) => onSelectTo(e.target.value)}
+                className="h-[58px] w-full rounded-xl border border-fg/10 bg-fg/[0.03] pl-9 pr-4 text-fg outline-none transition-colors focus-visible:border-charge/50 focus-visible:ring-2 focus-visible:ring-charge/25"
+              >
+                {SWAP_CHAINS_EVM.filter((c) => c.id !== fromChain).map((c) => (
+                  <option key={c.id} value={c.id} className="bg-elevated">
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <span className="mt-1 block pl-1 text-xs text-fg-tertiary">
+              To · {chainName(toChain)}
+            </span>
           </div>
         </div>
       </div>
@@ -193,7 +295,7 @@ export function BridgePanel() {
         <div className="flex items-center justify-between">
           <Label htmlFor="bridge-amount">Amount</Label>
           <span className="text-xs tabular-nums text-fg-tertiary">
-            Available {balance.usdcFormatted} USDC
+            Available {sourceBalance} USDC
           </span>
         </div>
         <AmountInput
@@ -201,7 +303,7 @@ export function BridgePanel() {
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
           symbol="USDC"
-          onMax={() => setAmount(balance.usdcFormatted)}
+          onMax={() => setAmount(sourceBalance)}
           className="mt-2"
           aria-invalid={Boolean(amountError)}
         />
@@ -219,11 +321,42 @@ export function BridgePanel() {
       {(phase === "running" || phase === "done" || phase === "error") && (
         <Card className="p-4">
           <TxProgress
-            steps={BRIDGE_STAGES.map((s) => ({
-              id: s.id,
-              label: s.label,
-              state: stateFor(s.id),
-            }))}
+            steps={BRIDGE_STAGES.map((s, i) => {
+              const detailStep = steps[i];
+              const explorerUrl =
+                detailStep?.txHash &&
+                (detailStep.explorerUrl ??
+                  (s.id === "mint"
+                    ? `${bridgeExplorer(toChain) ?? "https://sepolia.basescan.org"}/tx/${detailStep.txHash}`
+                    : fromExplorer
+                      ? `${fromExplorer}/tx/${detailStep.txHash}`
+                      : arcTxUrl(detailStep.txHash)));
+              const label =
+                detailStep && detailStep.state !== "pending" && detailStep.state !== "noop"
+                  ? detailStep.state === "success"
+                    ? "success"
+                    : detailStep.state
+                  : undefined;
+              return {
+                id: s.id,
+                label: s.label,
+                state: stateFor(s.id),
+                detail: label ? (
+                  explorerUrl ? (
+                    <a
+                      href={explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent underline underline-offset-2"
+                    >
+                      {label} ↗
+                    </a>
+                  ) : (
+                    label
+                  )
+                ) : undefined,
+              };
+            })}
           />
         </Card>
       )}
@@ -231,61 +364,42 @@ export function BridgePanel() {
       {phase === "running" && stage === "attest" && (
         <StatusLine>
           Circle is attesting the burn. This is the slow step — your USDC is
-          already burned on Arc and will mint on the destination. Safe to keep
-          this tab open.
+          already burned on {chainName(fromChain)} and will mint on{" "}
+          {chainName(toChain)}. Safe to keep this tab open.
+        </StatusLine>
+      )}
+
+      {needsFromSwitch && (
+        <StatusLine tone="warning">
+          Your wallet is on a different network. Switch to{" "}
+          {chainName(fromChain)} to bridge.
+        </StatusLine>
+      )}
+
+      {sameChain && (
+        <StatusLine tone="warning">
+          Source and destination must be different chains.
+        </StatusLine>
+      )}
+
+      {!sameChain && routeUnsupported(fromChain, toChain) && (
+        <StatusLine tone="warning">
+          That bridge route isn&apos;t enabled on testnet yet. Circle&apos;s testnet
+          CCTP supports Arc Testnet ↔ Base / Arbitrum / OP / Ethereum Sepolia and
+          Avalanche Fuji in both directions. Try one of those pairs.
         </StatusLine>
       )}
 
       {error && <StatusLine tone="danger">{error}</StatusLine>}
 
-      {steps.length > 0 && (phase === "done" || phase === "error") && (
-        <Card className="p-4">
-          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-fg-tertiary">
-            Transfer steps
-          </p>
-          <ul className="space-y-2">
-            {steps.map((s) => (
-              <li key={s.name} className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-fg">{s.name}</span>
-                <span
-                  className={
-                    s.state === "success"
-                      ? "text-accent"
-                      : s.state === "error"
-                        ? "text-danger"
-                        : "text-fg-tertiary"
-                  }
-                >
-                  {s.state}
-                  {s.txHash && (
-                    <a
-                      href={
-                        s.explorerUrl ??
-                        (s.name.toLowerCase().includes("mint")
-                          ? `${BRIDGE_CHAIN_META[toChain]?.explorerBase ?? "https://sepolia.basescan.org"}/tx/${s.txHash}`
-                          : arcTxUrl(s.txHash))
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-1.5 underline underline-offset-2"
-                    >
-                      ↗
-                    </a>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
       {phase === "done" && (
         <StatusLine tone="success">
           {destinationTxHash ? (
             <>
-              Bridge complete — your USDC was minted on the destination.{" "}
+              Bridge complete — your USDC was minted on{" "}
+              {chainName(toChain)}.{" "}
               <a
-                href={`${BRIDGE_CHAIN_META[toChain]?.explorerBase ?? "https://sepolia.basescan.org"}/tx/${destinationTxHash}`}
+                href={`${bridgeExplorer(toChain) ?? "https://sepolia.basescan.org"}/tx/${destinationTxHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 underline underline-offset-2"
@@ -296,15 +410,15 @@ export function BridgePanel() {
             </>
           ) : (
             <>
-              Burn confirmed on Arc. Your USDC is now minting on the destination
-              — that step finishes when Circle&apos;s attestation lands (usually
-              1–15 min). The burn shows as a transfer to the null address,
-              which is normal for CCTP.{" "}
+              Burn confirmed on {chainName(fromChain)}. Your USDC is now minting
+              on {chainName(toChain)} — that step finishes when Circle&apos;s
+              attestation lands (usually 1–15 min). The burn shows as a transfer
+              to the null address, which is normal for CCTP.{" "}
             </>
           )}
           {txHash && (
             <a
-              href={arcTxUrl(txHash)}
+              href={fromExplorer ? `${fromExplorer}/tx/${txHash}` : arcTxUrl(txHash)}
               target="_blank"
               rel="noopener noreferrer"
               className="ml-1 inline-flex items-center gap-1 underline underline-offset-2"
@@ -323,14 +437,12 @@ export function BridgePanel() {
         loading={phase === "running"}
         disabled={!canSubmit}
       >
-        {phase === "running" ? "Bridging…" : "Bridge USDC"}
+        {phase === "running"
+          ? "Bridging…"
+          : needsFromSwitch
+            ? `Switch to ${chainName(fromChain)}`
+            : `Bridge USDC`}
       </Button>
-
-      {!isOnArc && (
-        <p className="text-center text-xs text-fg-tertiary">
-          Switch to Arc Testnet to bridge.
-        </p>
-      )}
     </form>
   );
 }

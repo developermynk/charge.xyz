@@ -16,41 +16,95 @@
 @source "../../../packages/ui/src";
 @source "../../../packages/web3/src";
 
-/**
- * Charge.xyz theme — OLED glassmorphism.
- *
- * Direction from ui-ux-pro-max for "defi swap bridge dapp dark professional
- * fintech": Glassmorphism + Dark Mode (OLED), motion-driven, data-dense.
- */
+/*
+  Charge.xyz design system.
+
+  Off-black canvas (#0e100f), electric-purple primary (#6e54ff), radial-gradient
+  buttons, purple→white gradient text, ambient bloom + hairline grid. The
+  purple is the only "action" color; everything else is a neutral ramp on
+  near-black so the UI reads as lit glass, not flat grey.
+*/
 @theme {
-  --color-base: #08090c;
-  --color-elevated: #0e1015;
-  --color-panel: #12141b;
+  --color-base: #0e100f;
+  --color-elevated: #15131c;
+  --color-panel: #17141f;
 
-  --color-charge: #00e58a;
-  --color-charge-hover: #22f5a0;
-  --color-charge-dim: rgba(0, 229, 138, 0.12);
+  --color-charge: #6e54ff;
+  --color-charge-hover: #836ef9;
+  --color-charge-dim: rgba(110, 84, 255, 0.14);
 
-  --color-accent: #2775ca;
-  --color-accent-hover: #3b8ae0;
+  --color-accent: #b8b4fe;
+  --color-accent-hover: #cdbcff;
 
-  --color-success: #00e58a;
+  --color-success: #22f5a0;
   --color-warning: #ffb020;
   --color-danger: #ff4d4d;
 
-  --color-fg: #f2f4f8;
-  --color-fg-secondary: #9ba3b4;
-  --color-fg-tertiary: #5f6878;
+  --color-fg: #f5f5f7;
+  --color-fg-secondary: #a3a3ad;
+  --color-fg-tertiary: #6e6e78;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
-  --shadow-glow: 0 0 40px -8px rgba(0, 229, 138, 0.45);
+  --shadow-glow: 0 0 44px -8px rgba(110, 84, 255, 0.55);
   --shadow-panel: 0 24px 80px -12px rgba(0, 0, 0, 0.9);
 
   --animate-shimmer: shimmer 2.4s linear infinite;
   --animate-float: float 7s ease-in-out infinite;
   --animate-pulse-ring: pulse-ring 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/*
+  Light theme.
+
+  The whole product was designed dark ("lit glass on OLED"). The toggle flips
+  `html.dark` off, which swaps the token values below. Tokens (not hardcoded
+  colors) drive every surface, so one block inverts the entire app — glass
+  hairlines become dark-on-light, the purple accent stays, text ramps invert.
+  Semantic colors (success/warning/danger) are intentionally shared: green/red
+  mean the same thing in both modes.
+
+  These are plain CSS rules (no @variant wrapper) targeting :root:not(.dark),
+  so specificity beats the :root tokens from @theme and they only apply in
+  light mode.
+*/
+:root:not(.dark) {
+  --color-base: #f6f6fb;
+  --color-elevated: #ecebf4;
+  --color-panel: #ffffff;
+
+  --color-charge: #6e54ff;
+  --color-charge-hover: #836ef9;
+  --color-charge-dim: rgba(110, 84, 255, 0.10);
+
+  --color-accent: #6e54ff;
+  --color-accent-hover: #836ef9;
+
+  --color-success: #12b981;
+  --color-warning: #d98a00;
+  --color-danger: #e23b3b;
+
+  --color-fg: #0e100f;
+  --color-fg-secondary: #55555f;
+  --color-fg-tertiary: #8a8a96;
+
+  --shadow-glow: 0 0 44px -8px rgba(110, 84, 255, 0.28);
+  --shadow-panel: 0 24px 80px -24px rgba(20, 16, 40, 0.18);
+}
+
+/* Headline gradients that end in white are invisible on a light canvas. */
+:root:not(.dark) .text-gradient {
+  background: linear-gradient(135deg, #0e100f 0%, #55555f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+:root:not(.dark) .text-gradient-charge {
+  background: linear-gradient(135deg, #6e54ff 0%, #836ef9 55%, #0e100f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 @keyframes shimmer {
@@ -70,12 +124,15 @@
 
 @layer base {
   * {
-    border-color: rgb(255 255 255 / 0.08);
+    border-color: var(--color-border);
   }
 
   html {
     scroll-behavior: smooth;
     color-scheme: dark;
+  }
+  html:not(.dark) {
+    color-scheme: light;
   }
 
   body {
@@ -94,19 +151,31 @@
   }
 
   ::selection {
-    background: rgba(0, 229, 138, 0.28);
+    background: rgba(110, 84, 255, 0.32);
     color: #fff;
   }
+  :root:not(.dark) ::selection { color: #0e100f; }
 
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb {
+  .dark ::-webkit-scrollbar-thumb,
+  html.dark ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: content-box;
   }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.18); background-clip: content-box; }
+  .dark ::-webkit-scrollbar-thumb:hover,
+  html.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.18); background-clip: content-box; }
+
+  /* Light mode scrollbar: dark thumb on light track. */
+  ::-webkit-scrollbar-thumb {
+    background: rgba(14, 16, 15, 0.18);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(14, 16, 15, 0.28); background-clip: content-box; }
 
   /* Respect users who asked the OS for less motion. */
   @media (prefers-reduced-motion: reduce) {
@@ -122,33 +191,90 @@
 }
 
 @layer utilities {
-  /* The signature surface: translucent glass over OLED black. */
+  /* The signature surface: translucent glass. Uses fg-based alpha so it
+     inverts with the theme (white hairline on dark, dark hairline on light). */
   .glass {
-    background: rgba(255, 255, 255, 0.03);
+    background: color-mix(in srgb, var(--color-fg) 3%, transparent);
     backdrop-filter: blur(24px) saturate(140%);
     -webkit-backdrop-filter: blur(24px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
   }
 
   .glass-strong {
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-fg) 6%, transparent);
     backdrop-filter: blur(32px) saturate(160%);
     -webkit-backdrop-filter: blur(32px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-fg) 12%, transparent);
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, #f2f4f8 0%, #9ba3b4 100%);
+    background: linear-gradient(135deg, #f5f5f7 0%, #a3a3ad 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
+  /* Brand gradient: purple → lavender → white. */
   .text-gradient-charge {
-    background: linear-gradient(135deg, #00e58a 0%, #2775ca 100%);
+    background: linear-gradient(135deg, #836ef9 0%, #b8b4fe 55%, #ffffff 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+  }
+
+  /*
+    Primary action button — radial-gradient fill with an inner top highlight
+    and a 1px purple outline, plus a soft glow that fades in on hover. The
+    size/focus/active rings come from the Button cva; this utility only owns
+    the fill + glow.
+  */
+  .btn-charge {
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+    background:
+      radial-gradient(50% 50% at 50% 50%, rgba(110, 84, 255, 0) 0%, rgba(255, 255, 255, 0.12) 100%),
+      #6e54ff;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0.5px rgba(255, 255, 255, 0.4),
+      inset 0 -1px 0.5px rgba(255, 255, 255, 0.25),
+      0 0 0 1px rgba(79, 71, 235, 0.9);
+  }
+
+  .btn-charge::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+    background: radial-gradient(50% 50%, rgba(110, 84, 255, 0.66) 0%, rgba(255, 255, 255, 0.5) 100%);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      inset 0 0.75px 0.66px rgba(255, 255, 255, 0.8),
+      inset 0 -0.75px 0.66px rgba(255, 255, 255, 0.5),
+      0 0 0 1px rgba(79, 71, 235, 0.5);
+    transition: opacity 0.35s ease-out;
+  }
+
+  .btn-charge:hover::before {
+    opacity: 1;
+  }
+
+  /* Off-white secondary button. */
+  .btn-soft {
+    position: relative;
+    overflow: hidden;
+    color: #0e100f;
+    background:
+      radial-gradient(50% 50% at 50% 50%, rgba(250, 250, 250, 0.33) 0%, rgba(115, 115, 115, 0.04) 100%),
+      #fbfaf9;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      inset 0 1px #fff,
+      inset 0 -1px #fff,
+      0 0 0 1px rgba(0, 0, 0, 0.07);
   }
 
   /* Ambient light bloom behind hero content. */
@@ -158,7 +284,7 @@
     inset: -20%;
     background: radial-gradient(
       circle at 50% 40%,
-      rgba(0, 229, 138, 0.14) 0%,
+      rgba(110, 84, 255, 0.18) 0%,
       transparent 62%
     );
     pointer-events: none;
@@ -167,8 +293,8 @@
 
   .grid-bg {
     background-image:
-      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      linear-gradient(color-mix(in srgb, var(--color-fg) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--color-fg) 4%, transparent) 1px, transparent 1px);
     background-size: 64px 64px;
   }
 }

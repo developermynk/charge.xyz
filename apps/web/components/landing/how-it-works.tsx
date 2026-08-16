@@ -49,10 +49,10 @@ export function LandingHowItWorks() {
             <li key={step} className="relative">
               <div className="glass h-full rounded-2xl p-6">
                 <div className="flex items-center justify-between">
-                  <span className="inline-flex size-11 items-center justify-center rounded-xl bg-white/[0.06] text-fg-secondary">
+                  <span className="inline-flex size-11 items-center justify-center rounded-xl bg-fg/[0.06] text-fg-secondary">
                     <Icon className="size-5" aria-hidden />
                   </span>
-                  <span className="text-3xl font-semibold tabular-nums text-white/25">
+                  <span className="text-3xl font-semibold tabular-nums text-fg/25">
                     {step}
                   </span>
                 </div>
@@ -113,7 +113,7 @@ export function LandingFaq() {
           {FAQ.map(({ q, a }) => (
             <details
               key={q}
-              className="group glass rounded-2xl px-6 py-5 transition-colors hover:border-white/[0.14]"
+              className="group glass rounded-2xl px-6 py-5 transition-colors hover:border-fg/[0.14]"
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-fg [&::-webkit-details-marker]:hidden">
                 {q}

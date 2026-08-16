@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Allow the LAN IP so HMR + dev assets load when you open the app from
+  // another device on the network (not just localhost).
+  allowedDevOrigins: ["192.168.29.22", "192.168.29.223", "localhost"],
+
   /**
    * Workspace packages ship TypeScript source rather than a build step, so
    * Next compiles them itself. This keeps the monorepo free of a

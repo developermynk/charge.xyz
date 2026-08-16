@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { Card } from "@charge/ui";
 
+import { BackButton } from "@/components/app/back-button";
 import { BridgePanel } from "@/components/app/bridge-panel";
 
 export const metadata: Metadata = { title: "Bridge" };
@@ -9,6 +10,7 @@ export const metadata: Metadata = { title: "Bridge" };
 export default function BridgePage() {
   return (
     <div className="space-y-6">
+      <BackButton />
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Bridge</h1>
         <p className="mt-1 text-fg-secondary">

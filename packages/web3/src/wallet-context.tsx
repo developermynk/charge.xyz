@@ -18,13 +18,19 @@
 import * as React from "react";
 import { useAccount, useChainId, useDisconnect, useSwitchChain } from "wagmi";
 
-import { ARC_CHAIN_ID } from "@charge/chains";
+import { ARC_CHAIN_ID, ALL_CHAIN_IDS } from "@charge/chains";
 
 import { usePrivyBridge, type Eip1193Provider } from "./privy-bridge.tsx";
 
 export type AuthMethod = "email" | "wallet" | null;
 
 export type { Eip1193Provider };
+
+/** A single connected account on one chain. */
+export interface ChainAccount {
+  chainId: number;
+  address: `0x${string}`;
+}
 
 export interface WalletState {
   /** Active address, or undefined when signed out. */
@@ -38,8 +44,16 @@ export interface WalletState {
   chainId: number | undefined;
   /** True when connected to Arc Testnet. */
   isOnArc: boolean;
+  /**
+   * Every chain this account is reachable on. For an injected wallet this is
+   * the chains it holds; for email (Privy) it is the embedded wallets created
+   * per chain. Drives the "All networks" aggregate in the portfolio.
+   */
+  accounts: ChainAccount[];
   /** Prompt the wallet to switch to Arc. */
   switchToArc: () => Promise<void>;
+  /** Switch the active connection to any supported chain id. */
+  switchChain: (chainId: number) => Promise<void>;
   /** Sign out of whichever path is active. */
   disconnect: () => Promise<void>;
   /** EIP-1193 provider for the active account — feeds the Circle adapters. */
@@ -92,19 +106,62 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     if (privy.address) await privy.logout();
   }, [wagmiConnected, disconnectAsync, privy]);
 
+  const switchChain = React.useCallback(
+    async (target: number) => {
+      if (method === "wallet") {
+        await switchChainAsync({ chainId: target });
+        return;
+      }
+      if (method === "email") await privy.switchChain(target);
+    },
+    [method, switchChainAsync, privy],
+  );
+
+  // "All networks" aggregate: the active address is reachable on every
+  // supported EVM chain (one EOA spans all chains for injected wallets; Privy
+  // resolves the per-chain embedded wallet on action). Per-chain wallet
+  // discovery is v2 depth.
+  const accounts = React.useMemo<ChainAccount[]>(() => {
+    if (!address) return [];
+    return ALL_CHAIN_IDS.map((chainId) => ({ chainId, address }));
+  }, [address]);
+
+  // Safety net: Privy's `ready` can be delayed or never resolve on some mobile
+  // browsers (tracking-protection / private-DNS block its init beacon). Never
+  // let that pin the whole app behind a loading state. After a short grace
+  // period we treat the session as settled regardless.
+  const [forcedSettled, setForcedSettled] = React.useState(false);
+  React.useEffect(() => {
+    const t = setTimeout(() => setForcedSettled(true), 2500);
+    return () => clearTimeout(t);
+  }, []);
+  const isLoading = privy.isLoading && !forcedSettled;
+
   const value = React.useMemo<WalletState>(
     () => ({
       address,
       method,
       isConnected: Boolean(address),
-      isLoading: privy.isLoading,
+      isLoading,
       chainId,
       isOnArc: chainId === ARC_CHAIN_ID,
+      accounts,
       switchToArc,
+      switchChain,
       disconnect,
       getProvider,
     }),
-    [address, method, privy.isLoading, chainId, switchToArc, disconnect, getProvider],
+    [
+      address,
+      method,
+      isLoading,
+      chainId,
+      accounts,
+      switchToArc,
+      switchChain,
+      disconnect,
+      getProvider,
+    ],
   );
 
   return (

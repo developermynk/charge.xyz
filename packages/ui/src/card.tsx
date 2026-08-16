@@ -18,11 +18,11 @@ export const Card = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "relative rounded-2xl border border-white/[0.08] bg-white/[0.03]",
+        "relative rounded-2xl border border-fg/[0.08] bg-fg/[0.03]",
         "backdrop-blur-2xl",
         "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px",
-        "before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent",
-        glow && "shadow-[0_0_60px_-15px_rgba(0,229,138,0.3)]",
+        "before:bg-gradient-to-r before:from-transparent before:via-fg/20 before:to-transparent",
+        glow && "shadow-[0_0_60px_-15px_rgba(110,84,255,0.32)]",
         className,
       )}
       {...props}

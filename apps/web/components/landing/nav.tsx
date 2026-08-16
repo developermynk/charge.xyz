@@ -4,10 +4,9 @@ import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
-import { Button } from "@charge/ui";
-
 import { LaunchAppButton } from "@/components/connect-modal";
 import { ChargeLogo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const LINKS = [
   { href: "#features", label: "Features" },
@@ -31,7 +30,7 @@ export function LandingNav() {
       <header
         className={`fixed inset-x-0 top-0 z-40 transition-all duration-300 ${
           scrolled
-            ? "border-b border-white/[0.08] bg-base/80 backdrop-blur-xl"
+            ? "border-b border-fg/[0.08] bg-base/80 backdrop-blur-xl"
             : "border-b border-transparent"
         }`}
       >
@@ -43,10 +42,9 @@ export function LandingNav() {
             href="/"
             className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-charge/60"
           >
-            <ChargeLogo className="size-7" />
-            <span className="text-lg font-semibold tracking-tight">
+            <ChargeLogo className="size-8" />
+            <span className="text-xl font-semibold tracking-tight">
               Charge
-              <span className="text-fg-tertiary">.xyz</span>
             </span>
           </Link>
 
@@ -62,7 +60,8 @@ export function LandingNav() {
             ))}
           </div>
 
-          <div className="hidden md:block">
+          <div className="hidden items-center gap-2 md:flex">
+            <ThemeToggle />
             <LaunchAppButton size="sm">
               Launch app
             </LaunchAppButton>
@@ -70,7 +69,7 @@ export function LandingNav() {
 
           <button
             type="button"
-            className="rounded-lg p-2 text-fg-secondary transition-colors hover:bg-white/[0.06] hover:text-fg md:hidden"
+            className="rounded-lg p-2 text-fg-secondary transition-colors hover:bg-fg/[0.06] hover:text-fg md:hidden"
             onClick={() => setMobileOpen((v) => !v)}
             aria-expanded={mobileOpen}
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
@@ -84,7 +83,7 @@ export function LandingNav() {
         </nav>
 
         {mobileOpen && (
-          <div className="border-t border-white/[0.08] bg-base/95 px-6 py-5 backdrop-blur-xl md:hidden">
+          <div className="border-t border-fg/[0.08] bg-base/95 px-6 py-5 backdrop-blur-xl md:hidden">
             <div className="flex flex-col gap-4">
               {LINKS.map((l) => (
                 <a
@@ -102,6 +101,7 @@ export function LandingNav() {
               >
                 Launch app
               </LaunchAppButton>
+              <ThemeToggle className="size-11 w-full" />
             </div>
           </div>
         )}

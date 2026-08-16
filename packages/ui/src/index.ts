@@ -18,3 +18,4 @@ export {
 } from "./input.tsx";
 export { StatusLine, TxProgress, type StepState, type TxStep } from "./tx-progress.tsx";
 export { Modal } from "./modal.tsx";
+export { Switch, type SwitchProps } from "./switch.tsx";

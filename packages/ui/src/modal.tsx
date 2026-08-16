@@ -87,7 +87,7 @@ export function Modal({
         aria-label={title}
         tabIndex={-1}
         className={cn(
-          "relative w-full max-w-md rounded-3xl border border-white/10 bg-panel/95 backdrop-blur-2xl",
+          "relative w-full max-w-md rounded-3xl border border-fg/10 bg-panel/95 backdrop-blur-2xl",
           "shadow-[0_24px_80px_-12px_rgba(0,0,0,0.9)] outline-none",
           "animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none",
           className,
@@ -106,7 +106,7 @@ export function Modal({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="-mr-1 -mt-1 rounded-lg p-1.5 text-fg-tertiary transition-colors hover:bg-white/[0.06] hover:text-fg"
+            className="-mr-1 -mt-1 rounded-lg p-1.5 text-fg-tertiary transition-colors hover:bg-fg/[0.06] hover:text-fg"
           >
             <X className="size-4" aria-hidden />
           </button>

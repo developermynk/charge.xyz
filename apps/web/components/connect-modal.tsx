@@ -13,6 +13,29 @@ import {
 } from "@charge/web3";
 
 /**
+ * Minimal error boundary. Used to isolate the Privy-dependent email section so
+ * that a Privy init failure on an unexpected origin (e.g. a random
+ * *.trycloudflare.com tunnel host) degrades to the wallet-only path instead of
+ * taking down the whole modal — or, worse, the app.
+ */
+class SectionErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { failed: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
+    super(props);
+    this.state = { failed: false };
+  }
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  override render() {
+    if (this.state.failed) return this.props.fallback;
+    return this.props.children;
+  }
+}
+
+/**
  * Connect modal — the single most important screen in the app.
  *
  * Design review requirements encoded here:
@@ -21,6 +44,55 @@ import {
  *     a non-crypto user should not have to learn what a wallet is to send USDC.
  *  3. No dead ends. If a path is unavailable, say why and keep the other usable.
  */
+
+/**
+ * Single source of truth for the connect modal.
+ *
+ * WHY A CONTEXT (not per-component useState):
+ * `LaunchAppButton` used to call `useConnectModal()` for the button AND render
+ * its own `<ConnectModal open={open}>`, so two independent `useState`s existed
+ * for the same flag. Under React 19 Strict Mode + slow hydration (e.g. behind a
+ * Cloudflare tunnel) the discarded first mount's `onClick` (a stale `openModal`
+ * closure) could outlive the remounted instance that actually renders the
+ * modal — so clicking set dead state and the dialog never opened. Centralising
+ * the flag in one provider (mounted once at the app root, with a single
+ * `<ConnectModal>`) eliminates the dual-instance stale-closure entirely.
+ */
+type ConnectModalState = {
+  open: boolean;
+  openModal: () => void;
+  closeModal: () => void;
+};
+
+const ConnectModalContext = React.createContext<ConnectModalState | null>(null);
+
+export function ConnectModalProvider({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = React.useState(false);
+  const value = React.useMemo<ConnectModalState>(
+    () => ({
+      open,
+      openModal: () => setOpen(true),
+      closeModal: () => setOpen(false),
+    }),
+    [open],
+  );
+  return (
+    <ConnectModalContext.Provider value={value}>
+      {children}
+      {/* One modal for the whole app — never one per button. */}
+      <ConnectModal open={open} onClose={() => setOpen(false)} />
+    </ConnectModalContext.Provider>
+  );
+}
+
+export function useConnectModal(): ConnectModalState {
+  const ctx = React.useContext(ConnectModalContext);
+  if (!ctx) {
+    throw new Error("useConnectModal must be used within <ConnectModalProvider>");
+  }
+  return ctx;
+}
+
 export function ConnectModal({
   open,
   onClose,
@@ -105,51 +177,60 @@ export function ConnectModal({
         {error && <StatusLine tone="danger">{error}</StatusLine>}
 
         {/* ── Path 1: email. Deliberately first, and free of jargon. ── */}
-        <section>
-          <p className="mb-2.5 text-xs font-medium uppercase tracking-wider text-fg-tertiary">
-            Recommended
-          </p>
-          {isPrivyConfigured() && !privyBlocked ? (
-            <button
-              type="button"
-              onClick={handleEmail}
-              disabled={privy.isLoading}
-              className="group flex w-full items-center gap-4 rounded-2xl border border-charge/25 bg-charge/[0.07] p-4 text-left transition-all duration-200 hover:border-charge/45 hover:bg-charge/[0.12] disabled:opacity-50"
-            >
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-charge/15 text-charge">
-                <Mail className="size-5" aria-hidden />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-fg">
-                  Continue with email
-                </span>
-                <span className="block text-sm text-fg-secondary">
-                  We create your secure account instantly. Nothing to install.
-                </span>
-              </span>
-              <ChevronRight
-                className="size-4 shrink-0 text-fg-tertiary transition-transform group-hover:translate-x-0.5"
-                aria-hidden
-              />
-            </button>
-          ) : (
+        <SectionErrorBoundary
+          fallback={
             <StatusLine tone="warning">
-              Email sign-in is unavailable: this deployment has no Privy app id
-              configured. You can still continue with a wallet below.
+              Email sign-in is temporarily unavailable. You can still continue
+              with a wallet below.
             </StatusLine>
-          )}
-          {privyBlocked && (
-            <StatusLine tone="warning">
-              Email sign-in is blocked: this origin is not authorized in the
-              Privy dashboard. Add it under Settings → Domains, then reload.
-            </StatusLine>
-          )}
-        </section>
+          }
+        >
+          <section>
+            <p className="mb-2.5 text-xs font-medium uppercase tracking-wider text-fg-tertiary">
+              Recommended
+            </p>
+            {isPrivyConfigured() && !privyBlocked ? (
+              <button
+                type="button"
+                onClick={handleEmail}
+                disabled={privy.isLoading}
+                className="group flex w-full items-center gap-4 rounded-2xl border border-charge/25 bg-charge/[0.07] p-4 text-left transition-all duration-200 hover:border-charge/45 hover:bg-charge/[0.12] disabled:opacity-50"
+              >
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-charge/15 text-charge">
+                  <Mail className="size-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-fg">
+                    Continue with email
+                  </span>
+                  <span className="block text-sm text-fg-secondary">
+                    We create your secure account instantly. Nothing to install.
+                  </span>
+                </span>
+                <ChevronRight
+                  className="size-4 shrink-0 text-fg-tertiary transition-transform group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              </button>
+            ) : (
+              <StatusLine tone="warning">
+                Email sign-in is unavailable: this deployment has no Privy app id
+                configured. You can still continue with a wallet below.
+              </StatusLine>
+            )}
+            {privyBlocked && (
+              <StatusLine tone="warning">
+                Email sign-in is blocked: this origin is not authorized in the
+                Privy dashboard. Add it under Settings → Domains, then reload.
+              </StatusLine>
+            )}
+          </section>
+        </SectionErrorBoundary>
 
         <div className="flex items-center gap-3">
-          <span className="h-px flex-1 bg-white/8" />
+          <span className="h-px flex-1 bg-fg/8" />
           <span className="text-xs font-medium text-fg-tertiary">OR</span>
-          <span className="h-px flex-1 bg-white/8" />
+          <span className="h-px flex-1 bg-fg/8" />
         </div>
 
         {/* ── Path 2: bring your own wallet. ── */}
@@ -170,9 +251,9 @@ export function ConnectModal({
                 type="button"
                 onClick={() => handleWallet(connector.id)}
                 disabled={isPending || busy !== null}
-                className="group flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition-all duration-200 hover:border-white/20 hover:bg-white/[0.07] disabled:opacity-50"
+                className="group flex w-full items-center gap-4 rounded-2xl border border-fg/10 bg-fg/[0.03] p-4 text-left transition-all duration-200 hover:border-fg/20 hover:bg-fg/[0.07] disabled:opacity-50"
               >
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-fg-secondary">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-fg/[0.06] text-fg-secondary">
                   <Wallet className="size-5" aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -206,16 +287,6 @@ export function ConnectModal({
   );
 }
 
-/** Small hook so any component can open the connect modal. */
-export function useConnectModal() {
-  const [open, setOpen] = React.useState(false);
-  return {
-    open,
-    openModal: React.useCallback(() => setOpen(true), []),
-    closeModal: React.useCallback(() => setOpen(false), []),
-  };
-}
-
 export function LaunchAppButton({
   size = "md",
   block,
@@ -229,38 +300,33 @@ export function LaunchAppButton({
   className?: string;
   children?: React.ReactNode;
 }) {
-  const { open, openModal, closeModal } = useConnectModal();
+  const { openModal } = useConnectModal();
   const { isConnected } = useWallet();
 
   // Already signed in? Go straight into the dapp — don't reopen the connect
   // modal (which auto-closes when connected, making the click feel dead).
   if (isConnected) {
     return (
-      <Button
-        size={size}
-        block={block}
-        className={className}
-        asChild
-      >
+      <Button size={size} block={block} className={className} asChild>
         <Link href="/app">{children ?? label}</Link>
       </Button>
     );
   }
 
+  // Modal is rendered once at the app root (see ConnectModalProvider), so this
+  // button only needs to open it. No per-button modal instance.
   return (
-    <>
-      <Button
-        size={size}
-        block={block}
-        className={className}
-        onClick={openModal}
-      >
-        {children ?? label}
-      </Button>
-      <ConnectModal open={open} onClose={closeModal} />
-    </>
+    <Button
+      size={size}
+      block={block}
+      className={className}
+      onClick={openModal}
+    >
+      {children ?? label}
+    </Button>
   );
 }
+
 export function ConnectButton({
   size = "md",
   block,
@@ -270,7 +336,7 @@ export function ConnectButton({
   block?: boolean;
   label?: string;
 }) {
-  const { open, openModal, closeModal } = useConnectModal();
+  const { openModal } = useConnectModal();
   const { isConnected, address } = useWallet();
 
   if (isConnected && address) {
@@ -282,11 +348,8 @@ export function ConnectButton({
   }
 
   return (
-    <>
-      <Button size={size} block={block} onClick={openModal}>
-        {label}
-      </Button>
-      <ConnectModal open={open} onClose={closeModal} />
-    </>
+    <Button size={size} block={block} onClick={openModal}>
+      {label}
+    </Button>
   );
 }

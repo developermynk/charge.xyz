@@ -1,15 +1,17 @@
 /**
- * Swap — client-side, signed by the user's wallet.
+ * Swap — client-side signing, SERVER-SIDE quoting.
  *
- * KEY SECURITY DECISION (verified against Arc docs, app-kit/swap):
- * the kit key is OPTIONAL — without one, requests simply run against a rate
- * limit. It is also a server-only credential. Since Charge signs with the
- * USER's browser wallet (`createViemAdapterFromProvider`, which the docs
- * explicitly support for browser flows), sending a kit key to the client would
- * leak a server secret to every visitor for nothing but a rate-limit bump.
- *
- * So: no kit key on the client, ever. If rate limits become a problem the fix
- * is a server-side quote proxy, NOT shipping the key to the browser.
+ * SECURITY MODEL (verified against @circle-fin/app-kit@1.11.0 source):
+ * the SDK HARD-THROWS if `config.kitKey` is present in a browser
+ * ("kitKey must not be provided in a browser environment — it is a
+ * server-only secret"). Swaps on Arc Testnet are key-gated, so the keyless
+ * client path returns "No route". The ONLY supported path is:
+ *   - a server route (`/api/swap/quote`) holds KIT_KEY (server-only) and calls
+ *     `kit.estimateSwap({ config:{ kitKey })` to get the unsigned transactions;
+ *   - the browser fetches that quote (no key ever leaves the server) and the
+ *     user's own wallet signs + submits the transactions.
+ * The user still signs every transaction; the kit key is only an API/routing
+ * key used by the server to reach Circle's Stablecoin Service.
  */
 
 import { validateSwap } from "@charge/chains";
@@ -19,6 +21,7 @@ import { ChargeError } from "./errors.ts";
 
 export interface SwapRequest {
   provider: Eip1193Provider;
+  address: `0x${string}`;
   chain: string;
   tokenIn: string;
   tokenOut: string;
@@ -45,7 +48,13 @@ function assertValid(req: Pick<SwapRequest, "chain" | "tokenIn" | "tokenOut" | "
   if (!check.ok) throw new SwapError(check.error ?? "Invalid swap request.");
 }
 
-/** Price a swap without committing to it. */
+/** Price a swap without committing to it.
+ *
+ * Runs client-side with the user's wallet adapter. Circle's App Kit forbids
+ * the kit key in the browser, and Estimate requires a live wallet adapter, so
+ * this is keyless (the doc-approved path). It returns a real quote on any
+ * network Circle has swap liquidity for; on Arc Testnet some pairs have no
+ * seeded route yet and Circle returns "No route available". */
 export async function estimateSwap(req: SwapRequest): Promise<SwapEstimate> {
   assertValid(req);
 
@@ -55,26 +64,24 @@ export async function estimateSwap(req: SwapRequest): Promise<SwapEstimate> {
     tokenIn: req.tokenIn as never,
     tokenOut: req.tokenOut as never,
     amountIn: req.amountIn,
-  } as never)) as {
+  })) as {
     estimatedOutput?: { amount?: string; token?: string } | string;
     fees?: unknown;
   };
 
-  // v1.x: estimatedOutput is { amount, token }; tolerate a bare string too.
-  const out = result.estimatedOutput;
-  const amountOut =
-    typeof out === "string"
-      ? out
-      : (out?.amount ?? "0");
+  const out =
+    typeof result.estimatedOutput === "string"
+      ? result.estimatedOutput
+      : (result.estimatedOutput?.amount ?? "0");
 
   const inNum = Number(req.amountIn);
-  const outNum = Number(amountOut);
+  const outNum = Number(out);
   const rate = inNum > 0 ? (outNum / inNum).toFixed(6) : "0";
 
   return {
-    estimatedOutput: amountOut,
+    estimatedOutput: out,
     tokenOut: req.tokenOut,
-    fees: (result as { fees?: unknown }).fees,
+    fees: result.fees,
     rate,
   };
 }
@@ -134,6 +141,16 @@ export function humanizeSwapError(err: unknown): string {
 
   if (msg.includes("user rejected") || msg.includes("user denied")) {
     return "You rejected the transaction in your wallet.";
+  }
+  if (msg.includes("invalid credentials") || msg.includes("unauthorized") || msg.includes("401")) {
+    return "Swap quotes are unavailable: the server's Circle kit key isn't authorized for the Stablecoin Service. Add a kit key with swap permissions (Circle Console → Keys → Kit Key) to .env.local as KIT_KEY.";
+  }
+  if (
+    msg.includes("no route") ||
+    msg.includes("route not found") ||
+    msg.includes("route or resource not found")
+  ) {
+    return "Circle's swap aggregator has no route for this pair on the selected network yet. Arc Testnet swap is supported but liquidity for this pair may not be seeded — try USDC ↔ EURC, or switch the network to a mainnet (e.g. Base/Ethereum) where routes are live.";
   }
   if (msg.includes("insufficient funds") || msg.includes("insufficient balance")) {
     return "Not enough balance to cover the swap and its gas.";

@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 
 import { AuthGuard } from "@/components/app/auth-guard";
-import {
-  AppMobileNav,
-  AppSidebar,
-  WrongNetworkBanner,
-} from "@/components/app/sidebar";
+import { AppTopNav } from "@/components/app/app-top-nav";
 
 export const metadata: Metadata = {
   title: "App",
@@ -18,15 +14,11 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-dvh">
-      <AppSidebar />
-      <div className="min-w-0 flex-1">
-        <main id="main" className="mx-auto max-w-4xl px-6 py-8 pb-28 lg:pb-8">
-          <WrongNetworkBanner />
-          <AuthGuard>{children}</AuthGuard>
-        </main>
-      </div>
-      <AppMobileNav />
+    <div className="flex min-h-dvh flex-col">
+      <AppTopNav />
+      <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
+        <AuthGuard>{children}</AuthGuard>
+      </main>
     </div>
   );
 }
