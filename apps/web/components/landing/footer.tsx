@@ -4,14 +4,14 @@ import { ChargeLogo } from "@/components/logo";
 
 export function LandingFooter() {
   return (
-    <footer className="border-t border-white/[0.08] py-14">
+    <footer className="border-t border-fg/[0.08] py-14">
       <div className="mx-auto max-w-6xl px-6">
         <div className="flex flex-col justify-between gap-10 md:flex-row">
           <div className="max-w-xs">
             <div className="flex items-center gap-2.5">
-              <ChargeLogo className="size-7" />
-              <span className="text-lg font-semibold tracking-tight">
-                Charge<span className="text-fg-tertiary">.xyz</span>
+              <ChargeLogo className="size-8" />
+              <span className="text-xl font-semibold tracking-tight">
+                Charge
               </span>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-fg-secondary">
@@ -63,9 +63,28 @@ export function LandingFooter() {
               ]}
             />
           </div>
+
+          <div className="mt-10 flex items-center gap-4 border-t border-fg/[0.08] pt-6">
+            <a
+              href="https://x.com/Charge01_"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-fg/10 px-3 py-1.5 text-sm text-fg-secondary transition-colors hover:text-fg"
+            >
+              X
+            </a>
+            <a
+              href="https://chargexyz.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-fg/10 px-3 py-1.5 text-sm text-fg-secondary transition-colors hover:text-fg"
+            >
+              Website
+            </a>
+          </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-white/[0.08] pt-8 text-sm text-fg-tertiary sm:flex-row sm:items-center">
+        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-fg/[0.08] pt-8 text-sm text-fg-tertiary sm:flex-row sm:items-center">
           <p>© {new Date().getFullYear()} Charge.xyz</p>
           <p>
             Running on Arc Testnet. Testnet tokens hold no monetary value.

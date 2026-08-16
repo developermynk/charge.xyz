@@ -51,3 +51,6 @@ dist/
 
 # Local env example must never be committed with real values
 apps/web/.env.example
+
+# runtime indexer state (generated; not source)
+apps/web/.data/

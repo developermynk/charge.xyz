@@ -14,20 +14,9 @@ import {
   WalletProvider,
 } from "@charge/web3";
 
-/**
- * Provider tree.
- *
- * SSR NOTE (this bit is load-bearing):
- * `PrivyProvider` does not establish its React context during a server render,
- * so any component calling a Privy hook while Next prerenders the page throws
- * and the whole build fails. wagmi, by contrast, is SSR-safe (`ssr: true`) and
- * MUST stay in the server-rendered tree because the connect modal calls
- * `useConnect` on every render, open or not.
- *
- * So: wagmi + react-query render on the server, and Privy is mounted only after
- * hydration. Until then the bridge serves its inert value, which means the
- * landing page still server-renders as real HTML instead of an empty shell.
- */
+import { ConnectModalProvider } from "@/components/connect-modal";
+
+/** Provider tree ... */
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -51,7 +40,11 @@ export function Providers({ children }: { children: ReactNode }) {
 
   const walletTree = (
     <PrivyBridgeProvider enabled={privyActive}>
-      <WalletProvider>{children}</WalletProvider>
+      <WalletProvider>
+        {/* ConnectModalProvider mounts the single global connect modal; it must
+            sit inside WalletProvider so useWallet() works during prerender. */}
+        <ConnectModalProvider>{children}</ConnectModalProvider>
+      </WalletProvider>
     </PrivyBridgeProvider>
   );
 
@@ -68,7 +61,7 @@ export function Providers({ children }: { children: ReactNode }) {
         },
         appearance: {
           theme: "dark",
-          accentColor: "#00E58A",
+          accentColor: "#6e54ff",
           walletChainType: "ethereum-only",
         },
       }}

@@ -5,7 +5,9 @@ import {
   Coins,
   LayoutDashboard,
   LogOut,
+  QrCode,
   Send,
+  TrendingUp,
   Waypoints,
 } from "lucide-react";
 import Link from "next/link";
@@ -21,6 +23,8 @@ const NAV = [
   { href: "/app/swap", label: "Swap", icon: ArrowLeftRight },
   { href: "/app/bridge", label: "Bridge", icon: Waypoints },
   { href: "/app/send", label: "Send", icon: Send },
+  { href: "/app/receive", label: "Receive", icon: QrCode },
+  { href: "/app/market", label: "Market", icon: TrendingUp },
   { href: "/app/create", label: "Launch token", icon: Coins },
 ];
 
@@ -29,11 +33,11 @@ export function AppSidebar() {
   const { address, method, disconnect } = useWallet();
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-white/[0.08] bg-elevated/40 px-4 py-6 lg:flex">
+    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-fg/[0.08] bg-elevated/40 px-4 py-6 lg:flex">
       <Link href="/" className="mb-8 flex items-center gap-2.5 px-2">
-        <ChargeLogo className="size-7" />
-        <span className="text-lg font-semibold tracking-tight">
-          Charge<span className="text-fg-tertiary">.xyz</span>
+        <ChargeLogo className="size-8" />
+        <span className="text-xl font-semibold tracking-tight">
+          Charge
         </span>
       </Link>
 
@@ -49,7 +53,7 @@ export function AppSidebar() {
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-200",
                 active
                   ? "bg-charge/10 font-medium text-charge"
-                  : "text-fg-secondary hover:bg-white/[0.05] hover:text-fg",
+                  : "text-fg-secondary hover:bg-fg/[0.05] hover:text-fg",
               )}
             >
               <Icon className="size-4 shrink-0" aria-hidden />
@@ -59,7 +63,7 @@ export function AppSidebar() {
         })}
       </nav>
 
-      <div className="space-y-3 border-t border-white/[0.08] pt-4">
+      <div className="space-y-3 border-t border-fg/[0.08] pt-4">
         <div className="px-2">
           {address ? (
             <>
@@ -112,7 +116,7 @@ export function AppMobileNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-white/[0.08] bg-base/95 backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-fg/[0.08] bg-base/95 backdrop-blur-xl lg:hidden"
       aria-label="Application"
     >
       {NAV.map(({ href, label, icon: Icon, exact }) => {

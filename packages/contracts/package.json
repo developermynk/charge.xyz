@@ -6,7 +6,8 @@
   "main": "./artifacts/bytecode.ts",
   "types": "./artifacts/bytecode.ts",
   "exports": {
-    ".": "./artifacts/bytecode.ts"
+    ".": "./artifacts/bytecode.ts",
+    "./v2": "./artifacts/chargetokenv2.ts"
   },
   "scripts": {
     "build": "forge build && node scripts/emit-artifact.mjs",

@@ -17,14 +17,19 @@ import { ConnectModal } from "@/components/connect-modal";
  * meant to be.
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isConnected, isLoading } = useWallet();
+  const { isConnected } = useWallet();
   const [open, setOpen] = React.useState(false);
 
   // Avoid a hydration mismatch: wallet state is only known on the client.
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
-  if (!mounted || isLoading) {
+  // Gate ONLY on hydration. Rendering must never depend on a third-party
+  // wallet SDK's readiness (Privy `ready`), which can be delayed or never
+  // resolve on some mobile browsers (tracking-protection / private-DNS block
+  // its init beacon). The connect modal disables the email button on its own
+  // while Privy initializes, so the rest of the app stays usable.
+  if (!mounted) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="size-6 animate-spin rounded-full border-2 border-white/15 border-t-charge motion-reduce:animate-none" />

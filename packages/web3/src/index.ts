@@ -19,6 +19,7 @@ export {
   useChainId,
   useConnect,
   useDisconnect,
+  usePublicClient,
   useReadContract,
   useSwitchChain,
   useWaitForTransactionReceipt,
@@ -39,4 +40,9 @@ export {
   type AuthMethod,
   type WalletState,
 } from "./wallet-context.tsx";
-export { useArcBalance } from "./use-arc-balance.ts";
+export { useChainBalance, useArcBalance, useTokenBalance, type ChainBalance } from "./use-balance.ts";
+export {
+  useChainActivity,
+  type ChainActivity,
+  type ActivityItem,
+} from "./use-chain-activity.ts";

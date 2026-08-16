@@ -35,6 +35,7 @@ export interface PrivyBridgeState {
   login: () => void;
   logout: () => Promise<void>;
   switchToArc: () => Promise<void>;
+  switchChain: (chainId: number) => Promise<void>;
   getProvider: () => Promise<Eip1193Provider | undefined>;
 }
 
@@ -50,6 +51,7 @@ const INERT: PrivyBridgeState = {
   },
   logout: async () => {},
   switchToArc: async () => {},
+  switchChain: async () => {},
   getProvider: async () => undefined,
 };
 
@@ -88,6 +90,13 @@ function PrivyEnabled({ children }: { children: React.ReactNode }) {
     await wallet?.switchChain(ARC_CHAIN_ID);
   }, [wallet]);
 
+  const switchChain = React.useCallback(
+    async (target: number) => {
+      await wallet?.switchChain(target);
+    },
+    [wallet],
+  );
+
   const value = React.useMemo<PrivyBridgeState>(
     () => ({
       available: true,
@@ -97,9 +106,10 @@ function PrivyEnabled({ children }: { children: React.ReactNode }) {
       login,
       logout,
       switchToArc,
+      switchChain,
       getProvider,
     }),
-    [address, chainId, ready, login, logout, switchToArc, getProvider],
+    [address, chainId, ready, login, logout, switchToArc, switchChain, getProvider],
   );
 
   return (

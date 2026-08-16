@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Badge, Button } from "@charge/ui";
 
 import { LaunchAppButton } from "@/components/connect-modal";
+import { VantaFog } from "@/components/landing/vanta-fog";
 
 /**
  * Hero.
@@ -16,8 +17,10 @@ import { LaunchAppButton } from "@/components/connect-modal";
 export function LandingHero() {
   return (
     <section className="relative isolate overflow-hidden pt-32 pb-24 sm:pt-40 sm:pb-32">
+      {/* Animated fog (Charge palette). CSS grid/bloom below are fallbacks. */}
+      <VantaFog />
       {/* Ambient field */}
-      <div className="grid-bg absolute inset-0 -z-20 opacity-60" aria-hidden />
+      <div className="grid-bg absolute inset-0 -z-20 opacity-40" aria-hidden />
       <div
         className="absolute left-1/2 top-0 -z-10 h-[620px] w-[1100px] -translate-x-1/2 rounded-full opacity-70 blur-[120px]"
         style={{
@@ -74,7 +77,7 @@ export function LandingHero() {
         {/* Product preview */}
         <div className="relative mx-auto mt-20 max-w-4xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
           <div className="glass-strong rounded-3xl p-2 shadow-[0_40px_120px_-20px_rgba(0,0,0,0.95)]">
-            <div className="rounded-[20px] border border-white/[0.06] bg-elevated/80 p-6 sm:p-8">
+            <div className="rounded-[20px] border border-fg/[0.06] bg-elevated/80 p-6 sm:p-8">
               <HeroPreview />
             </div>
           </div>
@@ -85,20 +88,6 @@ export function LandingHero() {
           />
         </div>
       </div>
-
-      {/* Product preview */}
-      <div className="relative mx-auto mt-20 max-w-4xl animate-in fade-in slide-in-from-bottom-8 duration-1000">
-        <div className="glass-strong rounded-3xl p-2 shadow-[0_40px_120px_-20px_rgba(0,0,0,0.95)]">
-          <div className="rounded-[20px] border border-white/[0.06] bg-elevated/80 p-6 sm:p-8">
-            <HeroPreview />
-          </div>
-        </div>
-        {/* Reflected glow under the panel */}
-        <div
-          className="absolute -bottom-8 left-1/2 h-24 w-3/4 -translate-x-1/2 rounded-full bg-charge/20 blur-[60px]"
-          aria-hidden
-        />
-      </div>
       </section>
   );
 }
@@ -107,7 +96,7 @@ export function LandingHero() {
 function HeroPreview() {
   return (
     <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+      <div className="rounded-2xl border border-fg/[0.08] bg-fg/[0.02] p-4">
         <p className="text-xs font-medium uppercase tracking-wider text-fg-tertiary">
           You pay
         </p>
@@ -126,7 +115,7 @@ function HeroPreview() {
         <ArrowRight className="size-4" aria-hidden />
       </div>
 
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+      <div className="rounded-2xl border border-fg/[0.08] bg-fg/[0.02] p-4">
         <p className="text-xs font-medium uppercase tracking-wider text-fg-tertiary">
           You receive
         </p>

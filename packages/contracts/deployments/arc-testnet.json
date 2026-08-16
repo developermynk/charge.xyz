@@ -1,0 +1,25 @@
+{
+  "chainId": 5042002,
+  "network": "Arc Testnet",
+  "rpc": "https://rpc.testnet.arc.network/",
+  "explorer": "https://testnet.arcscan.app",
+  "usdc": "0x3600000000000000000000000000000000000000",
+  "ammRouter": "0xE27d5D256B370604F1Ff060fB489c6A8E3F8A6D9",
+  "deployer": "0x75d8A073fc6201e240E0E1A0Da8211Bbad34bD8e",
+  "deployedAt": "2026-08-16",
+  "notes": "Arc-native push model: trader pushes USDC via ERC-20 transfer(6dp) to Launchpad, then calls router.buy. Native value->contract and contract-pulled transferFrom are blocked for fresh contracts on Arc testnet. forge-script eth_call simulation faults on Arc blocklist precompile (StackUnderflow); use `cast send` for live ops, forge scripts only for anvil.",
+  "contracts": {
+    "FeeManager": "0x0F894aDF71E0aBdeA7A6796d1A6227B3080374c3",
+    "Treasury": "0x5F6826296c75074bb0eA83F4660defAe0337Bd54",
+    "Factory": "0x9ac168a5B701CF59Ad699E63B576DD125CF53BD7",
+    "LiquidityManager": "0xF9422E6105F353832a6B94230aF02088F918DE7D",
+    "Launchpad": "0xf0b3bbFb24c64Fa6Cfe4048A376C5eb5a6Eb8849",
+    "Router": "0xE6027493cBe753212555b1719edb611fB6A6C001"
+  },
+  "broadcast": "broadcast/DeployArcTestnet.s.sol/5042002/run-latest.json",
+  "smokeTest": {
+    "token": "0x216C7dB1E470646e0CBe04Eb42D23568D5b47637",
+    "buyTx": "0xba0eb9c978425a939736bac9fe85d48cc7a15c67695e78ca5043824562791d76",
+    "result": "create+buy+price/mcap/volume all verified live"
+  }
+}

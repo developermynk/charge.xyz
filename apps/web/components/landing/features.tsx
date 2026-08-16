@@ -63,7 +63,7 @@ export function LandingFeatures() {
         <div className="mt-16 grid gap-5 sm:grid-cols-2">
           {FEATURES.map(({ icon: Icon, title, body, href, accent }) => (
             <Link key={title} href={href} className="group block">
-              <Card className="h-full p-6 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.05]">
+              <Card className="h-full p-6 transition-all duration-300 hover:border-fg/20 hover:bg-fg/[0.05]">
                 <span
                   className={`inline-flex size-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 ${
                     accent === "charge"
@@ -87,7 +87,7 @@ export function LandingFeatures() {
         {/* The two structural guarantees, stated plainly. */}
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <Card className="p-6">
-            <span className="inline-flex size-11 items-center justify-center rounded-xl bg-white/[0.06] text-fg-secondary">
+            <span className="inline-flex size-11 items-center justify-center rounded-xl bg-fg/[0.06] text-fg-secondary">
               <Fuel className="size-5" aria-hidden />
             </span>
             <h3 className="mt-5 text-lg font-semibold tracking-tight">
@@ -101,7 +101,7 @@ export function LandingFeatures() {
           </Card>
 
           <Card className="p-6">
-            <span className="inline-flex size-11 items-center justify-center rounded-xl bg-white/[0.06] text-fg-secondary">
+            <span className="inline-flex size-11 items-center justify-center rounded-xl bg-fg/[0.06] text-fg-secondary">
               <ShieldCheck className="size-5" aria-hidden />
             </span>
             <h3 className="mt-5 text-lg font-semibold tracking-tight">

@@ -13,10 +13,10 @@ export const Input = React.forwardRef<
     <input
       ref={ref}
       className={cn(
-        "w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3",
+        "w-full rounded-xl border border-fg/10 bg-fg/[0.03] px-4 py-3",
         "text-sm text-fg placeholder:text-fg-tertiary",
         "transition-colors duration-200",
-        "focus:border-charge/40 focus:bg-white/[0.05] focus:outline-none focus:ring-2 focus:ring-charge/20",
+        "focus:border-charge/40 focus:bg-fg/[0.05] focus:outline-none focus:ring-2 focus:ring-charge/20",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
@@ -41,8 +41,8 @@ export const AmountInput = React.forwardRef<
   return (
     <div
       className={cn(
-        "group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3.5",
-        "transition-colors duration-200 focus-within:border-charge/40 focus-within:bg-white/[0.05]",
+        "group flex items-center gap-3 rounded-2xl border border-fg/10 bg-fg/[0.03] px-4 py-3.5",
+        "transition-colors duration-200 focus-within:border-charge/40 focus-within:bg-fg/[0.05]",
         className,
       )}
     >
@@ -121,7 +121,7 @@ export function Skeleton({
   return (
     <div
       className={cn(
-        "animate-pulse rounded-lg bg-white/[0.06] motion-reduce:animate-none",
+        "animate-pulse rounded-lg bg-fg/[0.06] motion-reduce:animate-none",
         className,
       )}
       {...props}
@@ -140,7 +140,7 @@ export function Badge({
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-        tone === "neutral" && "bg-white/[0.06] text-fg-secondary",
+        tone === "neutral" && "bg-fg/[0.06] text-fg-secondary",
         tone === "charge" && "bg-charge/15 text-charge",
         tone === "accent" && "bg-accent/15 text-accent",
         tone === "warning" && "bg-warning/15 text-warning",
