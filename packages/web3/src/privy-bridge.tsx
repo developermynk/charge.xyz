@@ -62,6 +62,28 @@ function PrivyEnabled({ children }: { children: React.ReactNode }) {
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { wallets } = useWallets();
 
+  // Force a fresh sign-in on every full page load. Privy auto-restores the
+  // embedded-wallet session, so the app would otherwise open "already
+  // connected" to the previous account on every browser/tab open. Clear the
+  // restored session once on mount; the root layout stays mounted during SPA
+  // navigation, so this only runs on a real open/reload. Until cleared we
+  // report as not-authenticated to avoid a flash of the connected state.
+  const [sessionCleared, setSessionCleared] = React.useState(false);
+  const didReset = React.useRef(false);
+  React.useEffect(() => {
+    if (didReset.current) return;
+    didReset.current = true;
+    if (authenticated) {
+      logout()
+        .catch(() => {})
+        .finally(() => setSessionCleared(true));
+    } else {
+      setSessionCleared(true);
+    }
+  }, [authenticated, logout]);
+
+  const live = sessionCleared && authenticated;
+
   // The embedded wallet is the one Privy provisions for email/social users.
   const wallet = React.useMemo(
     () =>
@@ -69,7 +91,7 @@ function PrivyEnabled({ children }: { children: React.ReactNode }) {
     [wallets],
   );
 
-  const address = (authenticated ? wallet?.address : undefined) as
+  const address = (live ? wallet?.address : undefined) as
     | `0x${string}`
     | undefined;
 
@@ -102,7 +124,7 @@ function PrivyEnabled({ children }: { children: React.ReactNode }) {
       available: true,
       address,
       chainId,
-      isLoading: !ready,
+      isLoading: !ready || !sessionCleared,
       login,
       logout,
       switchToArc,
