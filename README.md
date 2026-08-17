@@ -1,4 +1,4 @@
-# Charge.xyz
+# Charge
 
 **DeFi at full charge.** Swap, bridge, and deploy tokens across every major chain
 with institutional-grade speed and zero compromise on security.
