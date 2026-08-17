@@ -24,6 +24,9 @@ export interface MarketToken {
   /** Paired asset symbol (native of the chain). */
   paired: string;
   launchedAt: number;
+  /** On-chain contract address, when this is a real launched token. Enables
+   *  the inline trade panel; absent for purely-seed placeholders. */
+  address?: string;
   /** Optional project links surfaced on the token row. */
   links?: { website?: string; x?: string; telegram?: string };
 }
@@ -39,6 +42,7 @@ export const SEED_TOKENS: MarketToken[] = [
     change24h: 0.182,
     paired: "USDC",
     launchedAt: Date.now() - 1000 * 60 * 60 * 6,
+    address: "0x09117E4E6dc3F8c2AF9Ae6d1881bf3d39bbd145d",
     links: { website: "https://chargexyz.vercel.app", x: "https://x.com/Charge01_" },
   },
   {

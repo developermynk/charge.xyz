@@ -6,6 +6,7 @@ import * as React from "react";
 
 import { Button, Card } from "@charge/ui";
 import { EVM_CHAIN_BY_ID } from "@charge/chains";
+import { LaunchedTradePanel } from "@/components/app/launched-trade-panel";
 
 import { SEED_TOKENS, type MarketToken } from "@/lib/market-data";
 
@@ -99,6 +100,15 @@ export default function TokenDetailPage({
           </div>
         )}
       </Card>
+
+      {/* Inline trade panel for launched tokens (real on-chain address). */}
+      {token.address && (
+        <LaunchedTradePanel
+          token={token.address as `0x${string}`}
+          symbol={token.symbol}
+          decimals={18}
+        />
+      )}
 
       <div className="flex flex-wrap gap-3">
         <Button asChild>
