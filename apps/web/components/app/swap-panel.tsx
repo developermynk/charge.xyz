@@ -17,13 +17,14 @@ import {
   ARC_CHAIN_ID,
   ARC_SWAP_CHAIN,
   SWAP_CHAINS,
-  SWAP_CHAINS_EVM,
+  SWAP_SUPPORTED_CHAINS,
   TOKEN_REGISTRY,
   arcTxUrl,
   swapChainExplorer,
   swapChainNumericId,
   tokensForChain,
   usesAmmSwap,
+  usesVaultSwap,
   validateSwap,
 } from "@charge/chains";
 import {
@@ -32,6 +33,8 @@ import {
   humanizeSwapError,
   quoteAmmSwap,
   executeAmmSwap,
+  quoteVaultSwap,
+  executeVaultSwap,
   readTokenMeta,
   type SwapEstimate,
 } from "@charge/sdk";
@@ -59,6 +62,7 @@ export function SwapPanel() {
   const [tokenIn, setTokenIn] = React.useState("USDC");
   const [tokenOut, setTokenOut] = React.useState("EURC");
   const [amountIn, setAmountIn] = React.useState("");
+  const [slippageBps, setSlippageBps] = React.useState<number>(50);
   const [estimate, setEstimate] = React.useState<SwapEstimate | null>(null);
   const [phase, setPhase] = React.useState<Phase>("idle");
   const [error, setError] = React.useState<string | null>(null);
@@ -244,8 +248,8 @@ export function SwapPanel() {
         const provider = await getProvider();
         if (!provider) throw new Error("Connect a wallet to see a quote.");
 
-        const est = usesAmmSwap(selectedChain)
-          ? await quoteAmmSwap({
+        const est = usesVaultSwap(selectedChain, effectiveIn, effectiveOut)
+          ? await quoteVaultSwap({
               provider: provider as never,
               address: address as `0x${string}`,
               chain: selectedChain,
@@ -256,8 +260,23 @@ export function SwapPanel() {
               tokenInDecimals: customIn?.decimals,
               tokenOutDecimals: customOut?.decimals,
               amountIn: debouncedAmount,
+              slippageBps,
             })
-          : await estimateSwap({
+          : usesAmmSwap(selectedChain, effectiveIn, effectiveOut)
+            ? await quoteAmmSwap({
+              provider: provider as never,
+              address: address as `0x${string}`,
+              chain: selectedChain,
+              tokenIn: effectiveIn,
+              tokenOut: effectiveOut,
+              tokenInAddress: customIn?.address,
+              tokenOutAddress: customOut?.address,
+              tokenInDecimals: customIn?.decimals,
+              tokenOutDecimals: customOut?.decimals,
+              amountIn: debouncedAmount,
+              slippageBps,
+            })
+            : await estimateSwap({
               provider,
               address: address as `0x${string}`,
               chain: selectedChain,
@@ -308,8 +327,8 @@ export function SwapPanel() {
       const provider = await getProvider();
       if (!provider) throw new Error("No wallet provider available.");
 
-      const res = usesAmmSwap(selectedChain)
-        ? await executeAmmSwap({
+      const res = usesVaultSwap(selectedChain, effectiveIn, effectiveOut)
+        ? await executeVaultSwap({
             provider: provider as never,
             address: address as `0x${string}`,
             chain: selectedChain,
@@ -320,8 +339,23 @@ export function SwapPanel() {
             tokenInDecimals: customIn?.decimals,
             tokenOutDecimals: customOut?.decimals,
             amountIn,
+            slippageBps,
           })
-        : await executeSwap({
+        : usesAmmSwap(selectedChain, effectiveIn, effectiveOut)
+          ? await executeAmmSwap({
+            provider: provider as never,
+            address: address as `0x${string}`,
+            chain: selectedChain,
+            tokenIn: effectiveIn,
+            tokenOut: effectiveOut,
+            tokenInAddress: customIn?.address,
+            tokenOutAddress: customOut?.address,
+            tokenInDecimals: customIn?.decimals,
+            tokenOutDecimals: customOut?.decimals,
+            amountIn,
+            slippageBps,
+          })
+          : await executeSwap({
             provider,
             address: address as `0x${string}`,
             chain: selectedChain,
@@ -341,8 +375,11 @@ export function SwapPanel() {
   }
 
   const busy = phase === "signing";
+  const balInNum = balIn.balance != null ? Number(balIn.balance) : 0;
+  const insufficient = !!address && balIn.balance != null && Number(amountIn) > balInNum;
+
   const canSwap =
-    pairCheck.ok && Number(amountIn) > 0 && !!estimate && !busy;
+    pairCheck.ok && Number(amountIn) > 0 && !!estimate && !busy && !insufficient;
 
   const explorerBase = swapChainExplorer(selectedChain);
   const chainName =
@@ -361,7 +398,7 @@ export function SwapPanel() {
             onChange={(e) => setSelectedChain(e.target.value)}
             className="w-full bg-transparent outline-none"
           >
-            {SWAP_CHAINS_EVM.map((c) => (
+            {SWAP_SUPPORTED_CHAINS.map((c) => (
               <option key={c.id} value={c.id} className="bg-elevated">
                 {c.name}
               </option>
@@ -460,7 +497,60 @@ export function SwapPanel() {
         </div>
       </div>
 
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Slippage tolerance</Label>
+          <span className="text-xs tabular-nums text-fg-tertiary">
+            {(slippageBps / 100).toFixed(slippageBps % 100 === 0 ? 0 : 2)}%
+          </span>
+        </div>
+        <div className="flex gap-2">
+          {[10, 50, 100].map((bps) => (
+            <button
+              key={bps}
+              type="button"
+              onClick={() => setSlippageBps(bps)}
+              className={cn(
+                "flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+                slippageBps === bps
+                  ? "border-charge/50 bg-charge/10 text-fg"
+                  : "border-fg/10 text-fg-secondary hover:border-fg/20",
+              )}
+            >
+              {(bps / 100).toFixed(bps % 100 === 0 ? 0 : 2)}%
+            </button>
+          ))}
+          <input
+            inputMode="decimal"
+            value={slippageBps === 10 || slippageBps === 50 || slippageBps === 100 ? "" : (slippageBps / 100).toFixed(2)}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (Number.isFinite(v) && v >= 0 && v <= 50) setSlippageBps(Math.round(v * 100));
+            }}
+            placeholder="Custom"
+            aria-label="Custom slippage percent"
+            className="w-24 rounded-lg border border-fg/10 bg-fg/[0.03] px-3 py-1.5 text-xs tabular-nums outline-none focus:border-charge/50"
+          />
+        </div>
+        {estimate && usesAmmSwap(selectedChain, tokenIn, tokenOut) && !usesVaultSwap(selectedChain, tokenIn, tokenOut) && (
+          <p className="text-xs text-fg-tertiary">
+            Min received:{" "}
+            {(
+              Number(estimate.estimatedOutput) * (1 - slippageBps / 10000)
+            ).toLocaleString("en-US", { maximumFractionDigits: 6 })}{" "}
+            {tokenOut} (after {slippageBps / 100}% slippage)
+          </p>
+        )}
+      </div>
+
+
       {!pairCheck.ok && <StatusLine tone="warning">{pairCheck.error}</StatusLine>}
+
+      {insufficient && (
+        <StatusLine tone="warning">
+          Insufficient {tokenIn} balance — you have {balIn.balance} {tokenIn} but tried to swap {amountIn}.
+        </StatusLine>
+      )}
 
       {estimate && (
         <Card className="p-4">
@@ -468,7 +558,7 @@ export function SwapPanel() {
             label="Rate"
             value={`1 ${tokenIn} ≈ ${estimate.rate} ${tokenOut}`}
           />
-          <DetailRow label="Slippage tolerance" value="3.00%" />
+          <DetailRow label="Slippage tolerance" value={`${(slippageBps / 100).toFixed(slippageBps % 100 === 0 ? 0 : 2)}%`} />
           <DetailRow label="Network" value={chainName} />
         </Card>
       )}
@@ -486,20 +576,27 @@ export function SwapPanel() {
 
       {error && <StatusLine tone="danger">{error}</StatusLine>}
 
-      {phase === "done" && txHash && (
+      {phase === "done" && (
         <StatusLine tone="success">
-          Swap complete.{" "}
-          <a
-            href={
-              explorerBase ? `${explorerBase}/tx/${txHash}` : arcTxUrl(txHash)
-            }
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 underline underline-offset-2"
-          >
-            View transaction
-            <ExternalLink className="size-3" aria-hidden />
-          </a>
+          Swap complete.
+          {txHash ? (
+            <>
+              {" "}
+              <a
+                href={
+                  explorerBase ? `${explorerBase}/tx/${txHash}` : arcTxUrl(txHash)
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 underline underline-offset-2"
+              >
+                View transaction
+                <ExternalLink className="size-3" aria-hidden />
+              </a>
+            </>
+          ) : (
+            " Check your wallet / ArcScan for the transaction hash."
+          )}
         </StatusLine>
       )}
 

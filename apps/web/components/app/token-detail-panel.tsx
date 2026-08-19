@@ -159,9 +159,17 @@ export function TokenDetailPanel({ address }: { address: `0x${string}` }) {
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {mintable ? (
-              <Badge tone="danger">
-                <ShieldAlert className="size-3.5" /> MINT ENABLED
-              </Badge>
+              <span className="group relative inline-flex">
+                <Badge tone="danger">
+                  <ShieldAlert className="size-3.5" /> MINT ENABLED
+                </Badge>
+                <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-60 -translate-x-1/2 rounded-lg border border-fg/10 bg-surface px-3 py-2 text-xs text-fg-secondary opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                  The deployer still controls minting. They can create new
+                  supply at any time, which can dilute your holdings. Only trade
+                  tokens where you trust the creator. Owner-only actions show in
+                  the Creator controls panel.
+                </span>
+              </span>
             ) : (
               <Badge tone="charge">
                 <ShieldCheck className="size-3.5" /> Fixed supply

@@ -6,7 +6,7 @@ import Script from "next/script";
 /**
  * VantaFog
  *
- * Animated fog background for the landing hero, themed to the Charge.xyz
+ * Animated fog background for the landing hero, themed to the Chargefi
  * purple palette. Three.js r134 + Vanta Fog 0.5.24 are vendored under
  * /public/vendor and loaded via next/script so they never block first paint
  * and are not fetched on every route.

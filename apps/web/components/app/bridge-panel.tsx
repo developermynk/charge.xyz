@@ -24,6 +24,7 @@ import {
   bridgeAddParams,
   bridgeExplorer,
   swapChainNumericId,
+  BRIDGE_DESTINATIONS,
 } from "@charge/chains";
 import {
   BRIDGE_STAGES,
@@ -39,32 +40,24 @@ type Phase = "idle" | "running" | "done" | "error";
 /**
  * Bridge directions Circle's testnet CCTP actually supports (empirically
  * verified against @circle-fin/app-kit@1.11.0 in the charge-cctp-bridge-debug
- * skill). The SDK's BridgeChain enum *parses* many testnet pairs, but only
- * these reach the signing stage on testnet. Everything else throws
- * "That bridge route is not supported yet" from the SDK — we surface that
- * honestly up-front instead of letting the burn start and fail.
+ * skill). Arc Testnet <-> each of the 5 testnet destinations, in BOTH
+ * directions. Derived from `BRIDGE_DESTINATIONS` so it can never drift from the
+ * chain list — add a destination there and both directions open up.
  */
 const BRIDGE_ROUTES_VERIFIED: ReadonlyArray<[string, string]> = [
-  // Arc Testnet -> other testnets (verified live).
-  ["Arc_Testnet", "Base_Sepolia"],
-  ["Arc_Testnet", "Arbitrum_Sepolia"],
-  ["Arc_Testnet", "Optimism_Sepolia"],
-  ["Arc_Testnet", "Ethereum_Sepolia"],
-  ["Arc_Testnet", "Avalanche_Fuji"],
-  // Other testnets -> Arc Testnet (verified live: estimateBridge returns a
-  // valid quote for Base_Sepolia / Arbitrum_Sepolia -> Arc_Testnet).
-  ["Base_Sepolia", "Arc_Testnet"],
-  ["Arbitrum_Sepolia", "Arc_Testnet"],
-  ["Optimism_Sepolia", "Arc_Testnet"],
-  ["Ethereum_Sepolia", "Arc_Testnet"],
-  ["Avalanche_Fuji", "Arc_Testnet"],
+  ...BRIDGE_DESTINATIONS.map(
+    (d): [string, string] => ["Arc_Testnet", d.id],
+  ),
+  ...BRIDGE_DESTINATIONS.map(
+    (d): [string, string] => [d.id, "Arc_Testnet"],
+  ),
 ];
 
 const routeUnsupported = (from: string, to: string) =>
   !BRIDGE_ROUTES_VERIFIED.some(([f, t]) => f === from && t === to);
 
 const chainName = (sdkId: string) =>
-  SWAP_CHAINS.find((c) => c.id === sdkId)?.name ?? sdkId;
+  SWAP_CHAINS_EVM.find((c) => c.id === sdkId)?.name ?? sdkId;
 
 export function BridgePanel() {
   const { address, getProvider, chainId, switchChain, isConnected } =
@@ -315,7 +308,18 @@ export function BridgePanel() {
       <Card className="p-4">
         <DetailRow label="Protocol" value="CCTP (burn and mint)" />
         <DetailRow label="You receive" value="Native USDC, not a wrapped IOU" />
+        <DetailRow label="Rate" value="1:1 — no price slippage" />
+        <DetailRow
+          label="Fees"
+          value="Only network gas; Circle takes no spread"
+        />
         <DetailRow label="Typical time" value="1–15 minutes" />
+        <p className="mt-2 text-xs text-fg-tertiary">
+          CCTP burns your USDC on the source chain and mints the exact same
+          amount on the destination — there&apos;s no swap and no slippage, so
+          your funds can&apos;t lose value to price movement. The only cost is
+          the gas fee for each transaction.
+        </p>
       </Card>
 
       {(phase === "running" || phase === "done" || phase === "error") && (

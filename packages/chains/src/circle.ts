@@ -112,7 +112,7 @@ export interface BridgeChainMeta {
 
 export const BRIDGE_CHAIN_META: Record<string, BridgeChainMeta> = {
   Base_Sepolia: {
-    chainId: "0x14a44",
+    chainId: "0x14a34",
     chainIdNum: 84532,
     chainName: "Base Sepolia",
     nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
@@ -265,27 +265,24 @@ export interface EvmChainDef {
 }
 
 export const EVM_CHAINS: readonly EvmChainDef[] = [
+  // Arc Testnet is the home chain (native USDC gas; Charge vault swap).
   { sdkId: "Arc_Testnet", name: "Arc Testnet", chainId: 5042002, rpcUrl: "https://rpc.testnet.arc.network", explorerUrl: "https://testnet.arcscan.app", nativeSymbol: "USDC", testnet: true },
-  { sdkId: "Base", name: "Base", chainId: 8453, rpcUrl: "https://mainnet.base.org", explorerUrl: "https://basescan.org", nativeSymbol: "ETH", testnet: false },
+  // CCTP testnet bridge destinations (Circle testnet supports Arc <-> these).
   { sdkId: "Base_Sepolia", name: "Base Sepolia", chainId: 84532, rpcUrl: "https://sepolia.base.org", explorerUrl: "https://sepolia.basescan.org", nativeSymbol: "ETH", testnet: true },
-  { sdkId: "Arbitrum", name: "Arbitrum", chainId: 42161, rpcUrl: "https://arb1.arbitrum.io/rpc", explorerUrl: "https://arbiscan.io", nativeSymbol: "ETH", testnet: false },
   { sdkId: "Arbitrum_Sepolia", name: "Arbitrum Sepolia", chainId: 421614, rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc", explorerUrl: "https://sepolia.arbiscan.io", nativeSymbol: "ETH", testnet: true },
-  { sdkId: "Optimism", name: "Optimism", chainId: 10, rpcUrl: "https://mainnet.optimism.io", explorerUrl: "https://optimism.etherscan.io", nativeSymbol: "ETH", testnet: false },
   { sdkId: "Optimism_Sepolia", name: "OP Sepolia", chainId: 11155420, rpcUrl: "https://sepolia.optimism.io", explorerUrl: "https://sepolia-optimism.etherscan.io", nativeSymbol: "ETH", testnet: true },
-  { sdkId: "Ethereum", name: "Ethereum", chainId: 1, rpcUrl: "https://ethereum-rpc.publicnode.com", explorerUrl: "https://etherscan.io", nativeSymbol: "ETH", testnet: false },
-  { sdkId: "Ethereum_Sepolia", name: "Sepolia", chainId: 11155111, rpcUrl: "https://ethereum-sepolia-rpc.publicnode.com", explorerUrl: "https://sepolia.etherscan.io", nativeSymbol: "ETH", testnet: true },
-  { sdkId: "Polygon", name: "Polygon", chainId: 137, rpcUrl: "https://polygon-bor-rpc.publicnode.com", explorerUrl: "https://polygonscan.com", nativeSymbol: "MATIC", testnet: false },
-  { sdkId: "Avalanche", name: "Avalanche", chainId: 43114, rpcUrl: "https://api.avax.network/ext/bc/C/rpc", explorerUrl: "https://snowtrace.io", nativeSymbol: "AVAX", testnet: false },
+  { sdkId: "Ethereum_Sepolia", name: "Ethereum Sepolia", chainId: 11155111, rpcUrl: "https://ethereum-sepolia-rpc.publicnode.com", explorerUrl: "https://sepolia.etherscan.io", nativeSymbol: "ETH", testnet: true },
   { sdkId: "Avalanche_Fuji", name: "Avalanche Fuji", chainId: 43113, rpcUrl: "https://api.avax-test.network/ext/bc/C/rpc", explorerUrl: "https://testnet.snowtrace.io", nativeSymbol: "AVAX", testnet: true },
-  { sdkId: "Unichain", name: "Unichain", chainId: 130, rpcUrl: "https://mainnet.unichain.org", explorerUrl: "https://uniscan.xyz", nativeSymbol: "ETH", testnet: false },
-  { sdkId: "Linea", name: "Linea", chainId: 59144, rpcUrl: "https://rpc.linea.build", explorerUrl: "https://lineascan.build", nativeSymbol: "ETH", testnet: false },
-  { sdkId: "World_Chain", name: "World Chain", chainId: 480, rpcUrl: "https://worldchain-mainnet.g.alchemy.com/public", explorerUrl: "https://worldscan.org", nativeSymbol: "ETH", testnet: false },
-  { sdkId: "Ink", name: "Ink", chainId: 57073, rpcUrl: "https://rpc-gel.inkonchain.com", explorerUrl: "https://explorer.inkonchain.com", nativeSymbol: "ETH", testnet: false },
-  { sdkId: "Plume", name: "Plume", chainId: 98866, rpcUrl: "https://rpc.plume.org", explorerUrl: "https://explorer.plume.org", nativeSymbol: "ETH", testnet: false },
-  { sdkId: "Sei", name: "Sei", chainId: 1329, rpcUrl: "https://sei-rpc.publicnode.com", explorerUrl: "https://seiscan.xyz", nativeSymbol: "SEI", testnet: false },
-  { sdkId: "Sonic", name: "Sonic", chainId: 146, rpcUrl: "https://rpc.soniclabs.com", explorerUrl: "https://sonicscan.org", nativeSymbol: "S", testnet: false },
-  { sdkId: "HyperEVM", name: "HyperEVM", chainId: 999, rpcUrl: "https://rpc.hyperliquid.xyz/evm", explorerUrl: "https://hyperevmscan.io", nativeSymbol: "HYPE", testnet: false },
-  { sdkId: "XDC", name: "XDC", chainId: 50, rpcUrl: "https://rpc.xdc.org", explorerUrl: "https://xdcscan.com", nativeSymbol: "XDC", testnet: false },
+];
+
+/**
+ * Chains the in-app Swap actually works on today. On testnet the Charge vault
+ * only serves Arc Testnet (USDC/EURC/cirBTC); other chains route through
+ * Circle's Swap Kit (mainnet, needs KIT_KEY) and are intentionally hidden until
+ * enabled. To add a swap chain later, append it here AND to `EVM_CHAINS`.
+ */
+export const SWAP_SUPPORTED_CHAINS: readonly SwapChain[] = [
+  { id: "Arc_Testnet", name: "Arc Testnet", testnet: true },
 ];
 
 /** Fast lookup by numeric chain id. */
@@ -352,6 +349,13 @@ export const TOKEN_REGISTRY: Readonly<
   Arc_Testnet: {
     USDC: { address: ARC_TOKENS.USDC, decimals: 6 },
     EURC: { address: ARC_TOKENS.EURC, decimals: 6 },
+    // Circle Wrapped Bitcoin on Arc Testnet (viem token definition, chainId 5042002).
+    // Note: Circle's app-kit has no seeded cirBTC route on Arc Testnet, so
+    // cirBTC trades through the local Arc AMM (pools must be seeded there).
+    cirBTC: {
+      address: "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
+      decimals: 8,
+    },
   },
   Ethereum: {
     USDC: { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6 },
@@ -484,6 +488,66 @@ export const ARC_TESTNET_AMM = {
   usdcEurcPair: "0xb3685D16AAa06361ED28377b1319136650Fa9A13" as const,
 } as const;
 
+/**
+ * Charge's inventory-backed multi-token swap vault on Arc Testnet.
+ * Routes USDC/EURC/cirBTC swaps that have no AMM pool (cirBTC especially) and
+ * returns the destination token atomically. Quotes use owner-set USD prices
+ * (live FX / BTC), not an AMM curve.
+ */
+export const ARC_SWAP_VAULT = "0x02dDD07C4a4BA280b713Ca990883b59F359C3a9c" as const;
+
+/** Vault ABI subset used by Charge's swap integration. */
+export const ARC_SWAP_VAULT_ABI = [
+  {
+    name: "swap",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "fromToken", type: "address" },
+      { name: "toToken", type: "address" },
+      { name: "amountIn", type: "uint256" },
+      { name: "minAmountOut", type: "uint256" },
+    ],
+    outputs: [{ name: "amountOut", type: "uint256" }],
+  },
+  {
+    name: "quote",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "fromToken", type: "address" },
+      { name: "toToken", type: "address" },
+      { name: "amountIn", type: "uint256" },
+    ],
+    outputs: [{ name: "amountOut", type: "uint256" }],
+  },
+  {
+    name: "vaultBalance",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ name: "balance", type: "uint256" }],
+  },
+  {
+    name: "feeBps",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
+/**
+ * Route an Arc swap pair through the inventory vault when BOTH sides are
+ * vault-supported registry tokens (USDC/EURC/cirBTC) and the vault is
+ * deployed. Custom launched tokens keep using the local AMM.
+ */
+export function usesVaultSwap(chainId: string, tokenIn?: string, tokenOut?: string): boolean {
+  if (chainId !== ARC_SWAP_CHAIN) return false;
+  const vaultTokens = new Set(["USDC", "EURC", "cirBTC"]);
+  return vaultTokens.has(tokenIn ?? "") && vaultTokens.has(tokenOut ?? "");
+}
+
 /** Arc Testnet USDC — the ERC-20 form used by the AMM (paired asset for launches). */
 export const ARC_TESTNET_USDC = "0x3600000000000000000000000000000000000000" as const;
 
@@ -538,8 +602,11 @@ export const ARC_AMM_ROUTER_ABI = [
 ] as const;
 
 /** Whether swaps on this chain should route through the on-chain AMM. */
-export function usesAmmSwap(chainId: string): boolean {
-  return chainId === ARC_SWAP_CHAIN;
+export function usesAmmSwap(chainId: string, tokenIn?: string, tokenOut?: string): boolean {
+  // The local Uniswap-V2 AMM on Arc seeds USDC/EURC/cirBTC pools, so all Arc
+  // swaps route through it. Mainnets use Circle's app-kit (Swap Kit).
+  if (chainId !== ARC_SWAP_CHAIN) return false;
+  return true;
 }
 
 /** Native paired asset per chain — used by the Market launch flow. */
@@ -614,3 +681,185 @@ export function validateSwap(params: {
 }
 
 export type { ArcSwapToken };
+
+/**
+ * Arc native AMM — Uniswap V2 compatible (verified on-chain as
+ * `UniswapV2Router02` at the router address below; factory derived from
+ * `router.factory()`). USDC/EURC/cirBTC LP pools are seeded here so users can
+ * provide liquidity and earn the protocol's swap fees. No Chargefi contract is
+ * needed for the core LP flow — the AMM handles LP mint/burn and fee accrual
+ * natively (fee tier is the Uniswap V2 default of 30 bps).
+ *
+ * IMPORTANT: LP inventory is KEPT SEPARATE from the swap vault's inventory.
+ * The vault backs instant quotes; the AMM pools are the yield program. Do not
+ * fund one from the other or swaps will drain the pools and LP will drain the
+ * vault (recreating the old "InsufficientInventory" reverts).
+ */
+export const ARC_AMM_ROUTER = "0xE27d5D256B370604F1Ff060fB489c6A8E3F8A6d9" as const;
+export const ARC_AMM_FACTORY = "0x7483847d46db2920dd64efa676cf72dcf765814f" as const;
+/** Uniswap V2 default swap fee (30 bps = 0.30%). */
+export const ARC_AMM_FEE_BPS = 30;
+
+/** Stable LP pools Chargefi surfaces (Arc Testnet). */
+export interface LpPoolDef {
+  id: string;
+  tokenA: string; // Circle SDK id, e.g. "USDC"
+  tokenB: string; // Circle SDK id, e.g. "EURC"
+  /** human label for the pair */
+  label: string;
+  /**
+   * Whether the pool can actually be funded/used right now. USDC/cirBTC is
+   * blocked because Arc testnet's cirBTC token does not implement a working
+   * `transferFrom` (Uniswap V2 `addLiquidity` needs it), so the pair can't be
+   * seeded through the standard router. That is a token limitation, not a
+   * Chargefi bug — surfaced honestly in the UI instead of offering a broken form.
+   */
+  available: boolean;
+  unavailableReason?: string;
+}
+export const LP_POOLS: readonly LpPoolDef[] = [
+  { id: "USDC-EURC", tokenA: "USDC", tokenB: "EURC", label: "USDC / EURC", available: true },
+  {
+    id: "USDC-cirBTC",
+    tokenA: "USDC",
+    tokenB: "cirBTC",
+    label: "USDC / cirBTC",
+    available: false,
+    unavailableReason:
+      "Arc testnet cirBTC does not support transferFrom, so this pool cannot be seeded yet.",
+  },
+];
+
+/** Minimal Uniswap V2 Router02 ABI (add/remove liquidity + read-only quotes). */
+export const UNISWAP_V2_ROUTER_ABI = [
+  {
+    type: "function",
+    name: "factory",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "addLiquidity",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "tokenA", type: "address" },
+      { name: "tokenB", type: "address" },
+      { name: "amountADesired", type: "uint256" },
+      { name: "amountBDesired", type: "uint256" },
+      { name: "amountAMin", type: "uint256" },
+      { name: "amountBMin", type: "uint256" },
+      { name: "to", type: "address" },
+      { name: "deadline", type: "uint256" },
+    ],
+    outputs: [
+      { name: "amountA", type: "uint256" },
+      { name: "amountB", type: "uint256" },
+      { name: "liquidity", type: "uint256" },
+    ],
+  },
+  {
+    type: "function",
+    name: "removeLiquidity",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "tokenA", type: "address" },
+      { name: "tokenB", type: "address" },
+      { name: "liquidity", type: "uint256" },
+      { name: "amountAMin", type: "uint256" },
+      { name: "amountBMin", type: "uint256" },
+      { name: "to", type: "address" },
+      { name: "deadline", type: "uint256" },
+    ],
+    outputs: [
+      { name: "amountA", type: "uint256" },
+      { name: "amountB", type: "uint256" },
+    ],
+  },
+  {
+    type: "function",
+    name: "quote",
+    stateMutability: "pure",
+    inputs: [
+      { name: "amountA", type: "uint256" },
+      { name: "reserveA", type: "uint256" },
+      { name: "reserveB", type: "uint256" },
+    ],
+    outputs: [{ name: "amountB", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "getAmountsOut",
+    stateMutability: "view",
+    inputs: [
+      { name: "amountIn", type: "uint256" },
+      { name: "path", type: "address[]" },
+    ],
+    outputs: [{ name: "amounts", type: "uint256[]" }],
+  },
+] as const;
+
+/** Minimal Uniswap V2 Pair ABI (reserves + LP supply + user balance). */
+export const UNISWAP_V2_PAIR_ABI = [
+  {
+    type: "function",
+    name: "getReserves",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      { name: "reserve0", type: "uint256" },
+      { name: "reserve1", type: "uint256" },
+      { name: "blockTimestampLast", type: "uint256" },
+    ],
+  },
+  {
+    type: "function",
+    name: "totalSupply",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "token0",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "token1",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "factory",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+] as const;
+
+/** Minimal Uniswap V2 Factory ABI (pair lookup). */
+export const UNISWAP_V2_FACTORY_ABI = [
+  {
+    type: "function",
+    name: "getPair",
+    stateMutability: "view",
+    inputs: [
+      { name: "tokenA", type: "address" },
+      { name: "tokenB", type: "address" },
+    ],
+    outputs: [{ name: "pair", type: "address" }],
+  },
+] as const;

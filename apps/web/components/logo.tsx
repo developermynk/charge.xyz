@@ -12,7 +12,7 @@ export function ChargeLogo({ className }: { className?: string }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src="/charge-logo.png"
-      alt="Charge"
+      alt="Chargefi"
       width={32}
       height={32}
       className={className ?? "size-8"}

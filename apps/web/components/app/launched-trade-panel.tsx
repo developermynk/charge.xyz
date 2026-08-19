@@ -38,6 +38,22 @@ function short(a: string) {
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
 
+// Turn a raw viem/contract revert (e.g. "getAmountsOut reverted" with a stack
+// trace) into a clean, user-facing message. Never leak internal call data.
+function friendlyAmmError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e ?? "");
+  const m = msg.toLowerCase();
+  if (m.includes("revert") || m.includes("getamountsout") || m.includes("no pool") || m.includes("liquidity"))
+    return "No tradable pool for this token yet — the creator hasn't seeded liquidity, so buy/sell isn't available.";
+  if (m.includes("user rejected") || m.includes("rejected the request"))
+    return "You rejected the transaction in your wallet.";
+  if (m.includes("insufficient"))
+    return "Insufficient balance for this trade.";
+  if (m.includes("connect") || m.includes("provider"))
+    return "Connect your wallet to trade.";
+  return "Trade failed. Try again or check your wallet/network.";
+}
+
 export function LaunchedTradePanel({
   token,
   symbol,
@@ -59,6 +75,7 @@ export function LaunchedTradePanel({
   const [txns, setTxns] = React.useState<
     { hash: string; from: string; to: string; value: string }[]
   >([]);
+  const [hasPool, setHasPool] = React.useState<boolean | null>(null);
 
   // Build the AMM request for the current side. Buy = USDC -> token,
   // Sell = token -> USDC. The launched token is always passed by address so
@@ -117,7 +134,11 @@ export function LaunchedTradePanel({
         functionName: "getPair",
         args: [token, usdc],
       })) as `0x${string}`;
-      if (!pair || pair === "0x0000000000000000000000000000000000000000") return;
+      if (!pair || pair === "0x0000000000000000000000000000000000000000") {
+        setHasPool(false);
+        return;
+      }
+      setHasPool(true);
 
       // Determine pair ordering so we price the token correctly.
       const token0 = (await pc.readContract({
@@ -207,7 +228,7 @@ export function LaunchedTradePanel({
       setQuote(res.estimatedOutput);
       setPhase("idle");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Quote failed");
+      setError(friendlyAmmError(e));
       setPhase("error");
     }
   }
@@ -224,7 +245,7 @@ export function LaunchedTradePanel({
       setQuote(null);
       refreshData();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Swap failed");
+      setError(friendlyAmmError(e));
       setPhase("error");
     }
   }
@@ -291,17 +312,23 @@ export function LaunchedTradePanel({
       {needsArc && (
         <p className="text-xs text-fg-tertiary">Switch to Arc Testnet to trade.</p>
       )}
+      {hasPool === false && (
+        <p className="rounded-lg border border-fg/10 bg-fg/[0.03] px-3 py-2 text-xs text-fg-secondary">
+          No liquidity pool seeded for this token yet, so buy/sell isn&apos;t available. Once the
+          creator launches it with a pool on the Arc AMM, trading opens automatically.
+        </p>
+      )}
       {error && <p className="text-sm text-danger">{error}</p>}
 
       <div className="flex gap-3">
-        <Button type="button" variant="secondary" onClick={onQuote} disabled={phase === "quoting" || !amount}>
+        <Button type="button" variant="secondary" onClick={onQuote} disabled={phase === "quoting" || !amount || hasPool === false}>
           {phase === "quoting" ? <RefreshCw className="size-4 animate-spin" /> : null}
           Quote
         </Button>
         <Button
           type="button"
           onClick={onSwap}
-          disabled={phase === "signing" || !quote || !isConnected}
+          disabled={phase === "signing" || !quote || !isConnected || hasPool === false}
           className={side === "sell" ? "bg-danger hover:bg-danger/90" : ""}
         >
           {phase === "signing" ? <RefreshCw className="size-4 animate-spin" /> : null}

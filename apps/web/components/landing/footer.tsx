@@ -85,7 +85,7 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-fg/[0.08] pt-8 text-sm text-fg-tertiary sm:flex-row sm:items-center">
-          <p>© {new Date().getFullYear()} Charge.xyz</p>
+          <p>© {new Date().getFullYear()} Chargefi</p>
           <p>
             Running on Arc Testnet. Testnet tokens hold no monetary value.
           </p>

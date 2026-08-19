@@ -17,10 +17,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://charge.xyz"),
+  metadataBase: new URL("https://chargefi.xyz"),
   title: {
-    default: "Charge.xyz — DeFi at full charge on Arc",
-    template: "%s · Charge.xyz",
+    default: "Chargefi — DeFi at full charge on Arc",
+    template: "%s · Chargefi",
   },
   description:
     "The USDC-native control panel for Arc. Swap, bridge, launch tokens and send funds on the chain where USDC is the gas. Sign in with email — no wallet required.",
@@ -35,16 +35,16 @@ export const metadata: Metadata = {
     "token launcher",
   ],
   openGraph: {
-    title: "Charge.xyz — DeFi at full charge on Arc",
+    title: "Chargefi — DeFi at full charge on Arc",
     description:
       "Swap, bridge, launch and send USDC on Arc, where your money is also your gas.",
-    url: "https://charge.xyz",
-    siteName: "Charge.xyz",
+    url: "https://chargefi.xyz",
+    siteName: "Chargefi",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Charge.xyz — DeFi at full charge on Arc",
+    title: "Chargefi — DeFi at full charge on Arc",
     description:
       "Swap, bridge, launch and send USDC on Arc, where your money is also your gas.",
   },

@@ -17,8 +17,23 @@ export {
 export {
   quoteAmmSwap,
   executeAmmSwap,
+  quoteVaultSwap,
+  executeVaultSwap,
   type AmmSwapRequest,
+  type VaultSwapRequest,
 } from "./swap-amm.ts";
+export {
+  pairAddress,
+  getLpPosition,
+  quoteDeposit,
+  provideLiquidity,
+  removeLiquidity,
+  computeApy,
+  formatApy,
+  ARC_AMM_FEE_BPS,
+  type LpRequest,
+  type LpPosition,
+} from "./lp.ts";
 export {
   BRIDGE_STAGES,
   BridgeError,

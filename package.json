@@ -2,7 +2,7 @@
   "name": "charge-xyz",
   "version": "2.0.0",
   "private": true,
-  "description": "Charge.xyz \u2014 the USDC-native control panel for Arc. Swap, bridge, mint and send on Circle's Arc L1 where USDC is the gas.",
+  "description": "Chargefi — the USDC-native control panel for Arc. Swap, bridge, mint and send on Circle's Arc L1 where USDC is the gas.",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20"

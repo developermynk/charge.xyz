@@ -158,6 +158,12 @@ export function humanizeSwapError(err: unknown): string {
   if (msg.includes("slippage")) {
     return "Price moved beyond your slippage tolerance. Re-quote and try again.";
   }
+  if (
+    msg.includes("eth_gettransactionbyhash") ||
+    (msg.includes("invalid params") && msg.includes("getTransactionByHash"))
+  ) {
+    return "Arc's RPC returned a malformed transaction hash while confirming the swap. The swap was likely submitted — check it on ArcScan (the latest tx from your wallet). If it failed, retry with a smaller amount.";
+  }
   if (msg.includes("liquidity")) {
     return "Not enough liquidity for this pair right now. Try a smaller amount.";
   }

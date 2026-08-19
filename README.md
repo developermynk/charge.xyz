@@ -3,7 +3,7 @@
 **DeFi at full charge.** Swap, bridge, and deploy tokens across every major chain
 with institutional-grade speed and zero compromise on security.
 
-Charge.xyz is a multi-chain DeFi application — a marketing landing page plus a
+Chargefi is a multi-chain DeFi application — a marketing landing page plus a
 wallet-gated dashboard for swapping, bridging, launching ERC-20 tokens, and
 transferring assets. It is built as a **pnpm + Turborepo monorepo** with a
 Next.js App Router frontend, wagmi/viem wallet connectivity, and Circle modular

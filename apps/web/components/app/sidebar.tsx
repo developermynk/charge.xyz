@@ -3,6 +3,7 @@
 import {
   ArrowLeftRight,
   Coins,
+  Droplets,
   LayoutDashboard,
   LogOut,
   QrCode,
@@ -21,6 +22,7 @@ import { ChargeLogo } from "@/components/logo";
 const NAV = [
   { href: "/app", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/app/swap", label: "Swap", icon: ArrowLeftRight },
+  { href: "/app/pool", label: "Pool", icon: Droplets },
   { href: "/app/bridge", label: "Bridge", icon: Waypoints },
   { href: "/app/send", label: "Send", icon: Send },
   { href: "/app/receive", label: "Receive", icon: QrCode },
@@ -37,7 +39,7 @@ export function AppSidebar() {
       <Link href="/" className="mb-8 flex items-center gap-2.5 px-2">
         <ChargeLogo className="size-8" />
         <span className="text-xl font-semibold tracking-tight">
-          Charge
+          Chargefi
         </span>
       </Link>
 

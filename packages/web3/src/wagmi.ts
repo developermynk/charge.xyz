@@ -123,10 +123,10 @@ export const wagmiConfig: Config = createConfig({
             projectId: wcProjectId,
             showQrModal: true,
             metadata: {
-              name: "Charge.xyz",
+              name: "Chargefi",
               description: "The USDC-native control panel for Arc.",
-              url: "https://charge.xyz",
-              icons: ["https://charge.xyz/icon.png"],
+              url: "https://chargefi.xyz",
+              icons: ["https://chargefi.xyz/icon.png"],
             },
           }),
         ]
