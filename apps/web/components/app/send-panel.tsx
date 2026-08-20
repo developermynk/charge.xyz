@@ -127,6 +127,18 @@ export function SendPanel() {
   const [txHash, setTxHash] = React.useState<string | null>(null);
   const [scanOpen, setScanOpen] = React.useState(false);
 
+  // Stable identities so the scanner's start effect doesn't re-run (and
+  // re-trigger getUserMedia / the permission prompt) on every render.
+  const closeScan = React.useCallback(() => setScanOpen(false), []);
+  const onScanResult = React.useCallback(
+    (text: string) => {
+      const addr =
+        /^ethereum:([0-9a-fA-Fx]{40})/i.exec(text)?.[1] ?? text.trim();
+      setTo(addr);
+    },
+    [],
+  );
+
   const selectedNumeric = swapChainNumericId(selectedChain);
   const isArc = selectedChain === "Arc_Testnet";
   const needsSwitch = selectedNumeric !== undefined && chainId !== selectedNumeric;
@@ -415,12 +427,8 @@ export function SendPanel() {
 
       <QrScanner
         open={scanOpen}
-        onClose={() => setScanOpen(false)}
-        onResult={(text) => {
-          const addr =
-            /^ethereum:([0-9a-fA-Fx]{40})/i.exec(text)?.[1] ?? text.trim();
-          setTo(addr);
-        }}
+        onClose={closeScan}
+        onResult={onScanResult}
       />
     </form>
   );

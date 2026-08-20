@@ -33,8 +33,10 @@ export function QrScanner({
   const [manual, setManual] = React.useState("");
   const regionRef = React.useRef<HTMLDivElement>(null);
   const scannerRef = React.useRef<Html5Qrcode | null>(null);
+  const startedRef = React.useRef(false);
 
   const stop = React.useCallback(async () => {
+    startedRef.current = false;
     try {
       await scannerRef.current?.stop();
       scannerRef.current?.clear();
@@ -46,6 +48,11 @@ export function QrScanner({
 
   React.useEffect(() => {
     if (!open) return;
+    // Guard against double-start on the same element (which re-fires the
+    // camera permission prompt). The cleanup sets this false before any
+    // legitimate re-open.
+    if (startedRef.current) return;
+    startedRef.current = true;
 
     let cancelled = false;
     setError(null);

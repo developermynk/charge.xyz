@@ -128,15 +128,18 @@
   }
 
   /* Mobile hardening: stop accidental horizontal scroll/jitter on phones,
-     prevent iOS tap-zoom on input focus, and keep pull-to-refresh sane. */
+     prevent iOS tap-zoom on input focus, and keep pull-to-refresh sane.
+     NOTE: use `overflow-x: clip` (not `hidden`). `hidden` forces overflow-y
+     to `auto`, turning <body> into its own scroll container and trapping
+     single-finger scrolling on Android Chrome (only two-finger worked).
+     `clip` prevents the sideways overflow WITHOUT creating a scroll box. */
   html,
   body {
-    overflow-x: hidden;
+    overflow-x: clip;
     width: 100%;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior-y: contain;
   }
 
   /* iOS zooms the page when an input/select is focused unless the font is
