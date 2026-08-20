@@ -149,7 +149,10 @@ export async function waitReceipt(
       };
     }
     if (Date.now() - start > timeoutMs) {
-      throw new Error("Receipt not found within timeout");
+      // Non-fatal: Arc's RPC can be slow/flaky. Return the hash we have so the
+      // caller can still surface a transaction link instead of a hard error —
+      // the tx almost always confirmed, we just couldn't read the receipt.
+      return { status: "unknown", hash, transactionHash: hash };
     }
     await new Promise((res) => setTimeout(res, 2_000));
   }

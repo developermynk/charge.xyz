@@ -127,6 +127,27 @@
     border-color: var(--color-border);
   }
 
+  /* Mobile hardening: stop accidental horizontal scroll/jitter on phones,
+     prevent iOS tap-zoom on input focus, and keep pull-to-refresh sane. */
+  html,
+  body {
+    overflow-x: hidden;
+    width: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+
+  /* iOS zooms the page when an input/select is focused unless the font is
+     >=16px. This avoids the jarring zoom-on-tap in the Send/Swap forms. */
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
   html {
     scroll-behavior: smooth;
     color-scheme: dark;

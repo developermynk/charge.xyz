@@ -33,7 +33,7 @@ export function AppTopNav() {
         >
           <ChargeLogo className="size-8" />
           <span className="text-xl font-semibold tracking-tight">
-            Charge
+            Chargefi
           </span>
         </Link>
 
@@ -61,7 +61,9 @@ export function AppTopNav() {
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
-          <GlobalSearch />
+          <div className="hidden lg:block">
+            <GlobalSearch />
+          </div>
           <ThemeToggle />
           {isConnected ? (
             <WalletButton />

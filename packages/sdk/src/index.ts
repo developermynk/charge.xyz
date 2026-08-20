@@ -19,6 +19,10 @@ export {
   executeAmmSwap,
   quoteVaultSwap,
   executeVaultSwap,
+  tokenMeta,
+  publicClientFor,
+  walletClientFor,
+  waitReceipt,
   type AmmSwapRequest,
   type VaultSwapRequest,
 } from "./swap-amm.ts";
@@ -28,11 +32,17 @@ export {
   quoteDeposit,
   provideLiquidity,
   removeLiquidity,
+  getPool,
+  getPoolStats,
+  getUserPosition,
+  quoteRemoveLiquidity,
   computeApy,
+  computeApyForWindow,
   formatApy,
   ARC_AMM_FEE_BPS,
   type LpRequest,
   type LpPosition,
+  type PoolStats,
 } from "./lp.ts";
 export {
   BRIDGE_STAGES,

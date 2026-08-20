@@ -13,6 +13,7 @@ export interface NavItem {
 export const APP_NAV: NavItem[] = [
   { href: "/app", label: "Portfolio", exact: true },
   { href: "/app/swap", label: "Swap" },
+  { href: "/app/pools", label: "Pool" },
   { href: "/app/bridge", label: "Bridge" },
   { href: "/app/send", label: "Send" },
   { href: "/app/receive", label: "Receive" },

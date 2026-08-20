@@ -349,6 +349,13 @@ async function refreshLive(t: LaunchpadToken) {
 // ── Query helpers (used by API routes) ─────────────────────────────────────────
 export type SortKey = "newest" | "trending" | "volume" | "marketCap";
 
+export function listGraduatedTokens(): { address: Address; symbol: string; name: string }[] {
+  return store()
+    .listTokens()
+    .filter((t) => t.graduated)
+    .map((t) => ({ address: t.address, symbol: t.symbol, name: t.name }));
+}
+
 export function discover(opts: { sort?: SortKey; page?: number; pageSize?: number; q?: string } = {}) {
   const s = store();
   let rows = s.listTokens();

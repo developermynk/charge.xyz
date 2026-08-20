@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Droplets, Info } from "lucide-react";
-import { type EIP1193Provider } from "viem";
+import { type EIP1193Provider, formatUnits } from "viem";
 
 import {
   AmountInput,
@@ -13,14 +13,16 @@ import {
   StatusLine,
   cn,
 } from "@charge/ui";
-import { ARC_AMM_FEE_BPS, LP_POOLS, TOKEN_REGISTRY, type LpPoolDef } from "@charge/chains";
+import { ARC_AMM_FEE_BPS, LP_POOLS, getPoolById, type LpPoolDef } from "@charge/chains";
 import {
   computeApy,
   formatApy,
   getLpPosition,
   provideLiquidity,
   quoteDeposit,
+  quoteRemoveLiquidity,
   removeLiquidity,
+  tokenMeta,
   type LpPosition,
 } from "@charge/sdk";
 import { useWallet, useTokenBalance } from "@charge/web3";
@@ -30,10 +32,41 @@ type Mode = "deposit" | "withdraw";
 
 const ARC_CHAIN_ID = 5042002;
 
-export function PoolPanel() {
+/** Map raw viem/revert errors to human-readable messages (no raw codes shown). */
+function humanizeLpError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const m = msg.toLowerCase();
+  if (m.includes("user rejected") || m.includes("rejected")) {
+    return "Transaction rejected in your wallet.";
+  }
+  if (m.includes("allowance") || m.includes("approval")) {
+    return "Token approval failed. Please approve the token and try again.";
+  }
+  if (m.includes("transfer_from_failed") || m.includes("transferfrom")) {
+    return "Token transfer failed. Check your balance and approval, then retry.";
+  }
+  if (m.includes("insufficient") || m.includes("balance")) {
+    return "Insufficient balance for this amount.";
+  }
+  if (m.includes("exceeds") || m.includes("slippage") || m.includes("deadline")) {
+    return "The pool ratio changed. Please refresh the quote and try again.";
+  }
+  if (m.includes("receipt") || m.includes("timeout")) {
+    return "We couldn't confirm the transaction. Check ArcScan — it may have succeeded.";
+  }
+  if (m.includes("zero") || m.includes("greater than zero")) {
+    return "Enter an amount greater than zero.";
+  }
+  return "The transaction could not be completed. Please try again.";
+}
+
+export function PoolPanel({ poolId }: { poolId?: string }) {
+  const initial = poolId
+    ? (getPoolById(poolId) ?? LP_POOLS[0]!)
+    : LP_POOLS[0]!;
   const { address, getProvider, isConnected } = useWallet();
 
-  const [pool, setPool] = React.useState<LpPoolDef>(LP_POOLS[0]!);
+  const [pool, setPool] = React.useState<LpPoolDef>(initial);
   const [mode, setMode] = React.useState<Mode>("deposit");
   const [amountA, setAmountA] = React.useState("");
   const [amountB, setAmountB] = React.useState("");
@@ -44,8 +77,8 @@ export function PoolPanel() {
   const [apy, setApy] = React.useState<number | null>(null);
   const [refetchId, setRefetchId] = React.useState(0);
 
-  const tokenA = TOKEN_REGISTRY.Arc_Testnet?.[pool.tokenA];
-  const tokenB = TOKEN_REGISTRY.Arc_Testnet?.[pool.tokenB];
+  const tokenA = tokenMeta("Arc_Testnet", pool.tokenA);
+  const tokenB = tokenMeta("Arc_Testnet", pool.tokenB);
   const balA = useTokenBalance({ chainId: ARC_CHAIN_ID, address, token: tokenA });
   const balB = useTokenBalance({ chainId: ARC_CHAIN_ID, address, token: tokenB });
 
@@ -153,9 +186,7 @@ export function PoolPanel() {
       setAmountB("");
       setRefetchId((n) => n + 1);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "The transaction could not be completed.",
-      );
+      setError(humanizeLpError(err));
       setPhase("error");
     }
   }
@@ -171,10 +202,9 @@ export function PoolPanel() {
               key={p.id}
               type="button"
               onClick={() => setPool(p)}
-              disabled={!p.available}
               className={cn(
                 "flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
-                !p.available && "cursor-not-allowed opacity-50",
+                !p.available && "opacity-50",
                 p.id === pool.id
                   ? "border-charge/50 bg-charge/10 text-charge"
                   : "border-fg/10 bg-fg/[0.03] text-fg-secondary hover:text-fg",
@@ -202,7 +232,7 @@ export function PoolPanel() {
         ) : pos ? (
           <div className="space-y-2.5">
             <DetailRow
-              label="Pool APY"
+              label="Est. Fee APR"
               value={`${formatApy(apy)} (from real volume × fee ÷ TVL)`}
             />
             <DetailRow
@@ -223,7 +253,7 @@ export function PoolPanel() {
             />
             <DetailRow
               label="Your LP tokens"
-              value={fmt(pos.userBalance, 18)}
+              value={fmtLp(pos.userBalance)}
             />
           </div>
         ) : (
@@ -282,7 +312,7 @@ export function PoolPanel() {
             setAmountA(
               mode === "deposit"
                 ? balA.balance ?? "0"
-                : fmt(pos?.userBalance ?? 0n, 18),
+                : fmtLp(pos?.userBalance ?? 0n),
             )
           }
           className="mt-2"
@@ -290,6 +320,26 @@ export function PoolPanel() {
         />
         {amountError && (
           <p className="mt-1.5 text-xs text-danger">{amountError}</p>
+        )}
+
+        {mode === "withdraw" && address && (
+          <div className="mt-2 flex gap-1.5">
+            {[25, 50, 75, 100].map((pct) => (
+              <button
+                key={pct}
+                type="button"
+                onClick={async () => {
+                  if (!pos || pos.userBalance <= 0n) return;
+                  const removeRaw =
+                    (pos.userBalance * BigInt(pct)) / 100n;
+                  setAmountA(formatUnits(removeRaw, 18));
+                }}
+                className="rounded-md border border-fg/10 px-2.5 py-1 text-xs font-medium text-fg-secondary transition-colors hover:text-fg"
+              >
+                {pct === 100 ? "MAX" : `${pct}%`}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -356,4 +406,13 @@ function fmt(raw: bigint, decimals: number): string {
   return v.toLocaleString(undefined, {
     maximumFractionDigits: decimals > 6 ? 6 : decimals,
   });
+}
+
+/** LP balance display: full precision, never rounds a non-zero balance to "0". */
+function fmtLp(raw: bigint): string {
+  if (!raw) return "0";
+  const s = formatUnits(raw, 18);
+  // Trim trailing zeros, keep up to 10 significant decimals.
+  const trimmed = s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+  return trimmed;
 }

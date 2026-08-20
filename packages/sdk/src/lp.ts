@@ -37,6 +37,7 @@ import {
   UNISWAP_V2_FACTORY_ABI,
   UNISWAP_V2_PAIR_ABI,
   UNISWAP_V2_ROUTER_ABI,
+  getPoolById,
 } from "@charge/chains";
 import {
   ERC20_ABI,
@@ -209,18 +210,18 @@ export async function provideLiquidity(
       args: [req.address, router],
     })) as bigint;
     if (allowance < amt) {
-      const [h] = await wc.writeContract({
+      const approveHash = await wc.writeContract({
         address: token,
         abi: ERC20_ABI,
         functionName: "approve",
         args: [router, maxUint256],
         account: req.address,
       } as never);
-      await waitReceipt(pc, h as string);
+      await waitReceipt(pc, approveHash as string);
     }
   }
 
-  const [hash] = await wc.writeContract({
+  const raw = await wc.writeContract({
     address: router,
     abi: UNISWAP_V2_ROUTER_ABI,
     functionName: "addLiquidity",
@@ -236,8 +237,11 @@ export async function provideLiquidity(
     ],
     account: req.address,
   } as never);
-  const receipt = await waitReceipt(pc, hash as string);
-  return { txHash: receipt.transactionHash ?? (hash as string) };
+  // viem's walletClient.writeContract returns the tx hash directly (string),
+  // not a tuple — handle both shapes so we never emit an invalid hash.
+  const addHash = Array.isArray(raw) ? raw[0] : raw;
+  const receipt = await waitReceipt(pc, addHash as string);
+  return { txHash: receipt.transactionHash ?? (addHash as string) };
 }
 
 /** Remove liquidity: approve the pair LP token, removeLiquidity, confirm. */
@@ -270,25 +274,125 @@ export async function removeLiquidity(
     args: [req.address, router],
   })) as bigint;
   if (allowance < liquidity) {
-    const [h] = await wc.writeContract({
+    const approveHash = await wc.writeContract({
       address: pair,
       abi: ERC20_ABI,
       functionName: "approve",
       args: [router, maxUint256],
       account: req.address,
     } as never);
-    await waitReceipt(pc, h as string);
+    await waitReceipt(pc, approveHash as string);
   }
 
-  const [hash] = await wc.writeContract({
+  const raw = await wc.writeContract({
     address: router,
     abi: UNISWAP_V2_ROUTER_ABI,
     functionName: "removeLiquidity",
     args: [metaA.address, metaB.address, liquidity, minA, minB, req.address, deadline],
     account: req.address,
   } as never);
-  const receipt = await waitReceipt(pc, hash as string);
-  return { txHash: receipt.transactionHash ?? (hash as string) };
+  const removeHash = Array.isArray(raw) ? raw[0] : raw;
+  const receipt = await waitReceipt(pc, removeHash as string);
+  return { txHash: receipt.transactionHash ?? (removeHash as string) };
+}
+
+/** Snapshot of a pool's on-chain state (reserves, LP supply, TVL). */
+export interface PoolStats {
+  poolId: string;
+  pair: Address;
+  token0: Address;
+  token1: Address;
+  reserve0: bigint;
+  reserve1: bigint;
+  totalSupply: bigint;
+  tvlA: number; // TVL denominated in tokenA units (stables ~1:1)
+  tokenADecimals: number;
+  tokenBDecimals: number;
+}
+
+/** Resolve a pool definition by id into its canonical on-chain state. */
+export async function getPool(poolId: string): Promise<PoolStats> {
+  const def = getPoolById(poolId);
+  if (!def) throw new Error(`Unknown pool: ${poolId}`);
+  const pos = await getLpPosition(def.tokenA, def.tokenB, "0x0000000000000000000000000000000000000000" as Address);
+  return {
+    poolId,
+    pair: pos.pair,
+    token0: pos.token0,
+    token1: pos.token1,
+    reserve0: pos.reserve0,
+    reserve1: pos.reserve1,
+    totalSupply: pos.totalSupply,
+    tvlA: pos.tvlA,
+    tokenADecimals: pos.tokenADecimals,
+    tokenBDecimals: pos.tokenBDecimals,
+  };
+}
+
+/** Alias of getPool for API/UI symmetry (per spec: GET /api/pools/:pair/stats). */
+export const getPoolStats = getPool;
+
+/** User's LP position for a pool (LP balance, share %, position value). */
+export async function getUserPosition(
+  poolId: string,
+  user: Address,
+): Promise<LpPosition> {
+  const def = getPoolById(poolId);
+  if (!def) throw new Error(`Unknown pool: ${poolId}`);
+  return getLpPosition(def.tokenA, def.tokenB, user);
+}
+
+/**
+ * Given an amount of LP tokens the user wants to remove, compute the tokenA/tokenB
+ * they will receive at the current reserve ratio, with slippage-protected minimums.
+ * Returns human-decimal strings for the UI plus the raw LP amount to pass on-chain.
+ */
+export async function quoteRemoveLiquidity(
+  tokenA: string,
+  tokenB: string,
+  lpAmount: string,
+  user: Address,
+  slippageBps = 50,
+): Promise<{
+  lpRaw: bigint;
+  amountA: string;
+  amountB: string;
+  minA: string;
+  minB: string;
+}> {
+  const metaA = tokenMeta(CHAIN, tokenA);
+  const metaB = tokenMeta(CHAIN, tokenB);
+  const liquidity = parseUnits(lpAmount, 18); // LP token is 18dp
+  if (liquidity <= 0n) throw new Error("Enter an amount greater than zero.");
+  const pos = await getLpPosition(tokenA, tokenB, user);
+  const outA = (pos.reserve0 * liquidity) / pos.totalSupply;
+  const outB = (pos.reserve1 * liquidity) / pos.totalSupply;
+  const minA = (outA * BigInt(10000 - slippageBps)) / 10000n;
+  const minB = (outB * BigInt(10000 - slippageBps)) / 10000n;
+  return {
+    lpRaw: liquidity,
+    amountA: formatUnits(outA, metaA.decimals),
+    amountB: formatUnits(outB, metaB.decimals),
+    minA: formatUnits(minA, metaA.decimals),
+    minB: formatUnits(minB, metaB.decimals),
+  };
+}
+
+/**
+ * Windowed, HONEST Estimated Fee APR.
+ * `volumeA` must be REAL swap volume (in tokenA units) over the window.
+ * `days` scales the daily yield to the requested window (7/30 preferred — 24h is noisy).
+ * Returns null when there is no volume (UI shows "—", never a fabricated yield).
+ */
+export function computeApyForWindow(
+  tvlA: number,
+  volumeA: number | null,
+  days: number,
+): number | null {
+  if (tvlA <= 0 || volumeA === null || volumeA <= 0) return null;
+  const fees = (volumeA * ARC_AMM_FEE_BPS) / 10000;
+  const windowYield = fees / tvlA; // fraction of TVL earned over the window
+  return (windowYield / days) * 365 * 100; // annualized percent
 }
 
 /**
@@ -300,10 +404,7 @@ export function computeApy(
   tvlA: number,
   volume24hA: number | null,
 ): number | null {
-  if (tvlA <= 0 || volume24hA === null || volume24hA <= 0) return null;
-  const fees24h = (volume24hA * ARC_AMM_FEE_BPS) / 10000;
-  const dailyYield = fees24h / tvlA;
-  return dailyYield * 365 * 100; // percent
+  return computeApyForWindow(tvlA, volume24hA, 1);
 }
 
 /** Human-readable APY string, or "—" when no real volume exists. */

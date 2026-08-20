@@ -700,13 +700,32 @@ export const ARC_AMM_FACTORY = "0x7483847d46db2920dd64efa676cf72dcf765814f" as c
 /** Uniswap V2 default swap fee (30 bps = 0.30%). */
 export const ARC_AMM_FEE_BPS = 30;
 
-/** Stable LP pools Chargefi surfaces (Arc Testnet). */
+/**
+ * Single source of truth for Chargefi's public LP pools on Arc Testnet.
+ *
+ * Every pool is a Uniswap-V2 pair on the canonical Arc AMM (router/factory
+ * below). We do NOT maintain a separate reward vault or custodial liquidity
+ * venue — LPs fund the same pool Charge's swap router trades against, so swap
+ * fees accrue into the same reserves the LPs own. `ArcSwapMulti.sol` remains a
+ * fallback inventory route for tokens with no AMM pool; it is never presented
+ * as permissionless LP liquidity.
+ */
 export interface LpPoolDef {
   id: string;
   tokenA: string; // Circle SDK id, e.g. "USDC"
   tokenB: string; // Circle SDK id, e.g. "EURC"
   /** human label for the pair */
   label: string;
+  /** canonical Uniswap-V2 pair contract */
+  pairAddress: `0x${string}`;
+  /** AMM router used for add/remove (UniswapV2Router02) */
+  routerAddress: `0x${string}`;
+  /** AMM factory used for pair discovery */
+  factoryAddress: `0x${string}`;
+  /** swap fee in basis points (30 = 0.30%) */
+  feeBps: number;
+  /** pool is enabled for public LP + swap routing */
+  enabled: boolean;
   /**
    * Whether the pool can actually be funded/used right now. USDC/cirBTC is
    * blocked because Arc testnet's cirBTC token does not implement a working
@@ -716,19 +735,48 @@ export interface LpPoolDef {
    */
   available: boolean;
   unavailableReason?: string;
+  /**
+   * `core` = seeded at launch (USDC/EURC). `graduated` = created when a
+   * Charge launchpad token graduates to the AMM. Both are real AMM pools.
+   */
+  category: "core" | "graduated";
 }
+
 export const LP_POOLS: readonly LpPoolDef[] = [
-  { id: "USDC-EURC", tokenA: "USDC", tokenB: "EURC", label: "USDC / EURC", available: true },
+  {
+    id: "USDC-EURC",
+    tokenA: "USDC",
+    tokenB: "EURC",
+    label: "USDC / EURC",
+    pairAddress: "0xb3685D16AAa06361ED28377b1319136650Fa9A13",
+    routerAddress: ARC_TESTNET_AMM.router,
+    factoryAddress: ARC_AMM_FACTORY,
+    feeBps: ARC_AMM_FEE_BPS,
+    enabled: true,
+    available: true,
+    category: "core",
+  },
   {
     id: "USDC-cirBTC",
     tokenA: "USDC",
     tokenB: "cirBTC",
     label: "USDC / cirBTC",
+    pairAddress: "0x0000000000000000000000000000000000000000",
+    routerAddress: ARC_TESTNET_AMM.router,
+    factoryAddress: ARC_AMM_FACTORY,
+    feeBps: ARC_AMM_FEE_BPS,
+    enabled: false,
     available: false,
     unavailableReason:
       "Arc testnet cirBTC does not support transferFrom, so this pool cannot be seeded yet.",
+    category: "core",
   },
 ];
+
+/** Look up a pool definition by its id. */
+export function getPoolById(id: string): LpPoolDef | undefined {
+  return LP_POOLS.find((p) => p.id === id);
+}
 
 /** Minimal Uniswap V2 Router02 ABI (add/remove liquidity + read-only quotes). */
 export const UNISWAP_V2_ROUTER_ABI = [
@@ -847,6 +895,50 @@ export const UNISWAP_V2_PAIR_ABI = [
     stateMutability: "view",
     inputs: [],
     outputs: [{ name: "", type: "address" }],
+  },
+  // ── Events (for the LP indexer) ──────────────────────────────────────────────
+  {
+    type: "event",
+    name: "Mint",
+    inputs: [
+      { name: "sender", type: "address", indexed: true },
+      { name: "amount0", type: "uint256", indexed: false },
+      { name: "amount1", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "Burn",
+    inputs: [
+      { name: "sender", type: "address", indexed: true },
+      { name: "amount0", type: "uint256", indexed: false },
+      { name: "amount1", type: "uint256", indexed: false },
+      { name: "to", type: "address", indexed: true },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "Swap",
+    inputs: [
+      { name: "sender", type: "address", indexed: true },
+      { name: "amount0In", type: "uint256", indexed: false },
+      { name: "amount1In", type: "uint256", indexed: false },
+      { name: "amount0Out", type: "uint256", indexed: false },
+      { name: "amount1Out", type: "uint256", indexed: false },
+      { name: "to", type: "address", indexed: true },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "Sync",
+    inputs: [
+      { name: "reserve0", type: "uint256", indexed: false },
+      { name: "reserve1", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
   },
 ] as const;
 
