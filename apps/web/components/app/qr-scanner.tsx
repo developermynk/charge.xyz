@@ -52,14 +52,35 @@ export function QrScanner({
     scannerRef.current = null;
   }, []);
 
-  // Reset to the pre-prompt state every time the modal opens.
+  // Reset to the pre-prompt state every time the modal opens; meanwhile
+  // asynchronously check the camera permission so a "denied" (blocked) site
+  // shows the right guidance immediately rather than failing silently.
   React.useEffect(() => {
-    if (open) {
-      setPhase("prompt");
-      setError(null);
-      setManual("");
+    if (!open) return;
+    setPhase("prompt");
+    setError(null);
+    setManual("");
+
+    let cancelled = false;
+    if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: "camera" as PermissionName })
+        .then((status) => {
+          if (cancelled) return;
+          if (status.state === "denied") {
+            setError(
+              "Camera is blocked for this site. Open Chrome's site settings (⋮ → Site settings → Camera) and set it to Allow, then tap “Try camera again”. Or enter the address manually below.",
+            );
+            setPhase("error");
+          }
+        })
+        .catch(() => {
+          /* permissions API unavailable — proceed normally */
+        });
     }
+
     return () => {
+      cancelled = true;
       void stop();
     };
   }, [open, stop]);
