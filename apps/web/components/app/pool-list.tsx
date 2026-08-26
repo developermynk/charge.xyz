@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Card, CardContent } from "@charge/ui";
 import { Sparkline } from "@/components/app/sparkline";
+import { TokenIcon } from "@/components/app/token-icon";
 import { fmtUsdCompact, fmtPct } from "@/lib/format";
 import { useWallet } from "@charge/web3";
 
@@ -123,7 +124,16 @@ export function PoolList() {
                             (p.available ? "text-fg hover:text-charge" : "text-fg-tertiary")
                           }
                         >
-                          {p.label}
+                          <span className="inline-flex items-center gap-1.5">
+                            {p.label
+                              .split("/")
+                              .map((s) => s.trim())
+                              .filter(Boolean)
+                              .map((sym) => (
+                                <TokenIcon key={sym} symbol={sym} size={16} />
+                              ))}
+                            <span>{p.label}</span>
+                          </span>
                         </Link>
                         <span className="ml-2 text-xs text-fg-tertiary">
                           {p.feeBps / 100}%

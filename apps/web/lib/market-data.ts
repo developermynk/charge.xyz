@@ -43,7 +43,7 @@ export const SEED_TOKENS: MarketToken[] = [
     paired: "USDC",
     launchedAt: Date.now() - 1000 * 60 * 60 * 6,
     address: "0x09117E4E6dc3F8c2AF9Ae6d1881bf3d39bbd145d",
-    links: { website: "https://chargexyz.vercel.app", x: "https://x.com/Charge01_" },
+    links: { website: "https://www.chargefi.xyz/", x: "https://x.com/Charge01_" },
   },
   {
     id: "base-moon",

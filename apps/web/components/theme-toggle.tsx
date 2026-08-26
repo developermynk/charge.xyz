@@ -25,8 +25,7 @@ const STORAGE_KEY = "charge-theme";
 
 function getInitialTheme(): Theme {
   if (typeof document === "undefined") return "dark";
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved === "dark" || saved === "light") return saved;
+  // Read from DOM class (set by no-flash script) to avoid hydration mismatch
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
 
@@ -37,6 +36,19 @@ export function ThemeToggle({ className }: { className?: string }) {
   React.useEffect(() => {
     setTheme(getInitialTheme());
     setMounted(true);
+  }, []);
+
+  // Sync theme across tabs/windows
+  React.useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        const next = e.newValue as Theme;
+        document.documentElement.classList.toggle("dark", next === "dark");
+        setTheme(next);
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const toggle = React.useCallback(() => {

@@ -54,6 +54,9 @@ importers:
       '@tanstack/react-query':
         specifier: 5.101.4
         version: 5.101.4(react@19.2.4)
+      '@web3icons/react':
+        specifier: ^4.1.21
+        version: 4.1.21(react@19.2.4)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1936,6 +1939,14 @@ packages:
 
   '@walletconnect/window-metadata@1.0.1':
     resolution: {integrity: sha512-9koTqyGrM2cqFRW517BPY/iEtUDx2r1+Pwwu5m7sJ7ka79wi3EyqhqcICk/yDmv6jAS1rjKgTKXlEhanYjijcA==}
+
+  '@web3icons/common@0.11.50':
+    resolution: {integrity: sha512-mq3Pv4Paq5ikNRR7Yg5ywhLTuQZeseyaGPuAVEUCph+ssn7J6SWPRf8Ze3T2T7TVXy2YpljmVONasBs0+NKX2w==}
+
+  '@web3icons/react@4.1.21':
+    resolution: {integrity: sha512-MqL6wIy280RQwErHXGboWKzom61iSA4wQKLKIlu03T4pqjBGLa+O++chgihwSblyKCQtEuNBwgkutOvoaDs+jA==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
 
   abitype@1.2.3:
     resolution: {integrity: sha512-Ofer5QUnuUdTFsBRwARMoWKOH1ND5ehwYhJ3OJ/BQO+StkwQjHw0XyVh4vDttzHB7QOFhPHa/o413PJ82gU/Tg==}
@@ -6861,6 +6872,13 @@ snapshots:
     dependencies:
       '@walletconnect/window-getters': 1.0.1
       tslib: 1.14.1
+
+  '@web3icons/common@0.11.50': {}
+
+  '@web3icons/react@4.1.21(react@19.2.4)':
+    dependencies:
+      '@web3icons/common': 0.11.50
+      react: 19.2.4
 
   abitype@1.2.3(typescript@5.9.3)(zod@3.25.76):
     optionalDependencies:

@@ -74,7 +74,7 @@ export function LandingFooter() {
               X
             </a>
             <a
-              href="https://chargexyz.vercel.app/"
+              href="https://www.chargefi.xyz/"
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-lg border border-fg/10 px-3 py-1.5 text-sm text-fg-secondary transition-colors hover:text-fg"

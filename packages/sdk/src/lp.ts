@@ -198,10 +198,20 @@ export async function provideLiquidity(
   const minA = (amtA * BigInt(10000 - slippage)) / 10000n;
   const minB = (amtB * BigInt(10000 - slippage)) / 10000n;
 
-  // Approve both tokens to the router.
+  // The router SORTS the pair to (token0, token1); addLiquidity enforces
+  // amountAMin/amountBMin against the SORTED output. Pass tokens + mins in
+  // sorted order so they line up regardless of which symbol is token0.
+  const pair = await pairAddress(req.tokenA, req.tokenB);
+  const pos = await getLpPosition(req.tokenA, req.tokenB, "0x0000000000000000000000000000000000000000" as Address);
+  const aIsToken0 = getAddress(metaA.address) === getAddress(pos.token0);
+  const [tok0, tok1, amt0, amt1, min0, min1] = aIsToken0
+    ? [metaA.address, metaB.address, amtA, amtB, minA, minB]
+    : [metaB.address, metaA.address, amtB, amtA, minB, minA];
+
+  // Approve both tokens to the router (in sorted order).
   for (const [token, amt] of [
-    [metaA.address, amtA],
-    [metaB.address, amtB],
+    [tok0, amt0],
+    [tok1, amt1],
   ] as const) {
     const allowance = (await pc.readContract({
       address: token,
@@ -221,17 +231,42 @@ export async function provideLiquidity(
     }
   }
 
+  // Re-read reserves FRESH right before the on-chain call to eliminate
+  // stale-reserve slippage reverts.
+  const fresh = await pc.readContract({
+    address: pair,
+    abi: UNISWAP_V2_PAIR_ABI,
+    functionName: "getReserves",
+  });
+  const freshReserve0 = fresh[0], freshReserve1 = fresh[1];
+  const freshTotal = await pc.readContract({
+    address: pair,
+    abi: UNISWAP_V2_PAIR_ABI,
+    functionName: "totalSupply",
+  });
+  const fReserveA = aIsToken0 ? freshReserve0 : freshReserve1;
+  const fReserveB = aIsToken0 ? freshReserve1 : freshReserve0;
+  // Recompute expected outputs and mins from fresh state.
+  const fAmt0 = aIsToken0 ? amtA : amtB;
+  const fAmt1 = aIsToken0 ? amtB : amtA;
+  const outA = (fReserveA * fAmt0) / freshTotal;
+  const outB = (fReserveB * fAmt1) / freshTotal;
+  const fMinA = (outA * BigInt(10000 - slippage)) / 10000n;
+  const fMinB = (outB * BigInt(10000 - slippage)) / 10000n;
+  const fMin0 = aIsToken0 ? fMinA : fMinB;
+  const fMin1 = aIsToken0 ? fMinB : fMinA;
+
   const raw = await wc.writeContract({
     address: router,
     abi: UNISWAP_V2_ROUTER_ABI,
     functionName: "addLiquidity",
     args: [
-      metaA.address,
-      metaB.address,
-      amtA,
-      amtB,
-      minA,
-      minB,
+      tok0,
+      tok1,
+      amt0,
+      amt1,
+      fMin0,
+      fMin1,
       req.address,
       deadline,
     ],
@@ -256,16 +291,29 @@ export async function removeLiquidity(
   const pc = publicClientFor(CHAIN);
   const wc = walletClientFor(req.provider, CHAIN);
   const router = ARC_TESTNET_AMM.router as Address;
-  const pair = await pairAddress(req.tokenA, req.tokenB);
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 1_200);
   const slippage = req.slippageBps ?? 200;
 
-  // Estimate the two output amounts from the user's share to set sane mins.
+  // The router SORTS the pair to (token0, token1) and returns amount0/amount1
+  // in that order, enforcing amountAMin <= amount0Out and amountBMin <=
+  // amount1Out. So we must pass the tokens in sorted order and derive the min
+  // amounts from the SORTED reserves — otherwise reserve0 maps to the wrong
+  // token and the router reverts ("pool ratio changed").
   const pos = await getLpPosition(req.tokenA, req.tokenB, req.address);
-  const outA = (pos.reserve0 * liquidity) / pos.totalSupply;
-  const outB = (pos.reserve1 * liquidity) / pos.totalSupply;
-  const minA = (outA * BigInt(10000 - slippage)) / 10000n;
-  const minB = (outB * BigInt(10000 - slippage)) / 10000n;
+  const aIsToken0 = getAddress(metaA.address) === getAddress(pos.token0);
+  const reserve0 = aIsToken0 ? pos.reserve0 : pos.reserve1;
+  const reserve1 = aIsToken0 ? pos.reserve1 : pos.reserve0;
+  let outA = (reserve0 * liquidity) / pos.totalSupply;
+  let outB = (reserve1 * liquidity) / pos.totalSupply;
+  let minA = (outA * BigInt(10000 - slippage)) / 10000n;
+  let minB = (outB * BigInt(10000 - slippage)) / 10000n;
+
+  // Pass tokens to the router in sorted (token0, token1) order.
+  const [tok0, tok1, min0, min1] = aIsToken0
+    ? [metaA.address, metaB.address, minA, minB]
+    : [metaB.address, metaA.address, minB, minA];
+
+  const pair = await pairAddress(req.tokenA, req.tokenB);
 
   const allowance = (await pc.readContract({
     address: pair,
@@ -284,11 +332,33 @@ export async function removeLiquidity(
     await waitReceipt(pc, approveHash as string);
   }
 
+  // Re-read reserves FRESH right before the on-chain call to eliminate
+  // stale-reserve slippage reverts ("pool ratio changed").
+  const fresh = await pc.readContract({
+    address: pair,
+    abi: UNISWAP_V2_PAIR_ABI,
+    functionName: "getReserves",
+  });
+  const freshReserve0 = fresh[0], freshReserve1 = fresh[1];
+  const freshTotal = await pc.readContract({
+    address: pair,
+    abi: UNISWAP_V2_PAIR_ABI,
+    functionName: "totalSupply",
+  });
+  const fReserveA = aIsToken0 ? freshReserve0 : freshReserve1;
+  const fReserveB = aIsToken0 ? freshReserve1 : freshReserve0;
+  outA = (fReserveA * liquidity) / freshTotal;
+  outB = (fReserveB * liquidity) / freshTotal;
+  minA = (outA * BigInt(10000 - slippage)) / 10000n;
+  minB = (outB * BigInt(10000 - slippage)) / 10000n;
+  const fMin0 = aIsToken0 ? minA : minB;
+  const fMin1 = aIsToken0 ? minB : minA;
+
   const raw = await wc.writeContract({
     address: router,
     abi: UNISWAP_V2_ROUTER_ABI,
     functionName: "removeLiquidity",
-    args: [metaA.address, metaB.address, liquidity, minA, minB, req.address, deadline],
+    args: [tok0, tok1, liquidity, fMin0, fMin1, req.address, deadline],
     account: req.address,
   } as never);
   const removeHash = Array.isArray(raw) ? raw[0] : raw;

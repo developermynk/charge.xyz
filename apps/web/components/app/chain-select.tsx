@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, ChevronDown, Network } from "lucide-react";
+import { Check } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@charge/ui";
 import { ALL_CHAIN_IDS, ARC_CHAIN_ID, EVM_CHAIN_BY_ID } from "@charge/chains";
+import { ChainIcon } from "@/components/app/token-icon";
 
 /**
  * Network picker used on the Portfolio page. Active selection shows in the
@@ -46,9 +47,14 @@ export function ChainSelect({
         onClick={() => setOpen((o) => !o)}
         className="inline-flex items-center gap-2 rounded-full bg-fg/[0.06] px-4 py-2 text-sm font-medium text-fg transition-colors hover:bg-fg/[0.1]"
       >
-        <Network className="size-4 text-fg-secondary" aria-hidden />
-        {label}
-        <ChevronDown className="size-4 text-fg-tertiary" aria-hidden />
+        {value === "all" ? (
+          "All networks"
+        ) : (
+          <span className="flex items-center gap-2">
+            <ChainIcon chainId={value} size={16} />
+            {label}
+          </span>
+        )}
       </button>
 
       {open && (
@@ -67,7 +73,6 @@ export function ChainSelect({
             )}
           >
             <span className="flex items-center gap-2">
-              <Network className="size-4" aria-hidden />
               All networks
             </span>
             {value === "all" && <Check className="size-4" aria-hidden />}
@@ -98,6 +103,7 @@ export function ChainSelect({
                   {active && (
                     <span className="size-1.5 rounded-full bg-charge" aria-hidden />
                   )}
+                  <ChainIcon chainId={id} size={18} />
                   {def.name}
                   {id === ARC_CHAIN_ID && (
                     <span className="text-[10px] uppercase tracking-wide text-charge/70">

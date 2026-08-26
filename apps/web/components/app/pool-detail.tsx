@@ -18,6 +18,7 @@ import { PoolPanel } from "@/components/app/pool-panel";
 import { fmtUsdCompact, fmtPct, aprLabel } from "@/lib/format";
 import { getPoolById } from "@charge/chains";
 import { tokenMeta } from "@charge/sdk";
+import { TokenIcon } from "@/components/app/token-icon";
 
 interface Stats {
   poolId: string;
@@ -171,7 +172,13 @@ export function PoolDetail({ poolId }: { poolId: string }) {
           return (
             <Link href={`/app/swap?from=${a.address}&to=${b.address}`}>
               <Button block size="lg" variant="secondary">
-                Swap {def.tokenA} → {def.tokenB}
+                <span className="inline-flex items-center gap-1.5">
+                  <TokenIcon symbol={def.tokenA} size={18} />
+                  Swap {def.tokenA}
+                  <span aria-hidden>→</span>
+                  <TokenIcon symbol={def.tokenB} size={18} />
+                  {def.tokenB}
+                </span>
               </Button>
             </Link>
           );

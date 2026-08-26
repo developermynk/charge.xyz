@@ -38,6 +38,7 @@ import {
 } from "@charge/web3";
 
 import { QrScanner } from "@/components/app/qr-scanner";
+import { ChainIcon, TokenIcon } from "@/components/app/token-icon";
 
 type Phase = "idle" | "signing" | "pending" | "done" | "error";
 
@@ -262,7 +263,11 @@ export function SendPanel() {
       <div>
         <Label>Network</Label>
         <div className="mt-2 flex items-center gap-2 rounded-xl border border-fg/10 bg-fg/[0.03] px-3 py-3 text-sm font-medium focus-within:border-charge/50">
-          <Network className="size-4 text-fg-secondary" aria-hidden />
+          <ChainIcon
+            chainId={swapChainNumericId(selectedChain)}
+            size={18}
+            className="text-fg-secondary"
+          />
           <select
             aria-label="Send network"
             value={selectedChain}
@@ -295,8 +300,14 @@ export function SendPanel() {
                   : "border-fg/10 bg-fg/[0.03] hover:border-fg/20",
               )}
             >
-              <span className="block text-sm font-medium text-fg">
-                {a.label}
+              <span className="flex items-center gap-2">
+                <TokenIcon
+                  symbol={a.isNative ? (selectedChain === "Arc_Testnet" ? "USDC" : (SWAP_CHAINS_EVM.find((c) => c.id === selectedChain)?.name.split(" ")[0] ?? "ETH")) : a.label}
+                  size={20}
+                />
+                <span className="block text-sm font-medium text-fg">
+                  {a.label}
+                </span>
               </span>
               <span className="mt-0.5 block text-[11px] leading-tight text-fg-tertiary">
                 {a.hint}

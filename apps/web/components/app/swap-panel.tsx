@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ExternalLink, RefreshCw, Network } from "lucide-react";
+import { ArrowRight, ExternalLink, RefreshCw, Network } from "lucide-react";
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -39,6 +39,7 @@ import {
   type SwapEstimate,
 } from "@charge/sdk";
 import { useWallet, useTokenBalance } from "@charge/web3";
+import { TokenIcon } from "@/components/app/token-icon";
 
 type Phase = "idle" | "quoting" | "signing" | "done" | "error";
 
@@ -410,18 +411,21 @@ export function SwapPanel() {
       <div>
         <Label htmlFor="swap-from">You pay</Label>
         <div className="mt-2 flex gap-2">
-          <select
-            aria-label="Token to swap from"
-            value={tokenIn}
-            onChange={(e) => setTokenIn(e.target.value)}
-            className="rounded-xl border border-fg/10 bg-fg/[0.03] px-3 py-3 text-sm font-medium outline-none focus:border-charge/50"
-          >
-            {selectableIn.map((t) => (
-              <option key={t} value={t} className="bg-elevated">
-                {t}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2 rounded-xl border border-fg/10 bg-fg/[0.03] px-3 py-3 text-sm font-medium outline-none focus:border-charge/50">
+            <TokenIcon symbol={tokenIn} size={20} />
+            <select
+              aria-label="Token to swap from"
+              value={tokenIn}
+              onChange={(e) => setTokenIn(e.target.value)}
+              className="bg-transparent outline-none"
+            >
+              {selectableIn.map((t) => (
+                <option key={t} value={t} className="bg-elevated">
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
           <AmountInput
             id="swap-from"
             value={amountIn}
@@ -458,25 +462,28 @@ export function SwapPanel() {
             "transition hover:bg-fg/[0.07] active:scale-95",
           )}
         >
-          <ArrowDown className="size-4" aria-hidden />
+          <ArrowRight className="size-4" aria-hidden />
         </button>
       </div>
 
       <div>
         <Label htmlFor="swap-to">You receive</Label>
         <div className="flex gap-2">
-          <select
-            aria-label="Token to swap to"
-            value={tokenOut}
-            onChange={(e) => setTokenOut(e.target.value)}
-            className="rounded-xl border border-fg/10 bg-fg/[0.03] px-3 py-3 text-sm font-medium outline-none focus:border-charge/50"
-          >
-            {selectableOut.map((t) => (
-              <option key={t} value={t} className="bg-elevated">
-                {t}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2 rounded-xl border border-fg/10 bg-fg/[0.03] px-3 py-3 text-sm font-medium outline-none focus:border-charge/50">
+            <TokenIcon symbol={tokenOut} size={20} />
+            <select
+              aria-label="Token to swap to"
+              value={tokenOut}
+              onChange={(e) => setTokenOut(e.target.value)}
+              className="bg-transparent outline-none"
+            >
+              {selectableOut.map((t) => (
+                <option key={t} value={t} className="bg-elevated">
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="flex flex-1 items-center rounded-xl border border-fg/10 bg-fg/[0.02] px-4 py-3 text-lg tabular-nums text-fg-secondary">
             {phase === "quoting" ? (
               <span className="inline-flex items-center gap-2 text-sm">

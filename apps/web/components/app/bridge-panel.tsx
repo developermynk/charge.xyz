@@ -34,6 +34,7 @@ import {
   type BridgeStepInfo,
 } from "@charge/sdk";
 import { useWallet, useChainBalance } from "@charge/web3";
+import { ChainIcon } from "@/components/app/token-icon";
 
 type Phase = "idle" | "running" | "done" | "error";
 
@@ -227,7 +228,11 @@ export function BridgePanel() {
               Source chain
             </label>
             <div className="relative">
-              <Network className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
+              <ChainIcon
+                chainId={swapChainNumericId(fromChain)}
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-secondary"
+              />
               <select
                 id="from-chain"
                 value={fromChain}
@@ -241,7 +246,8 @@ export function BridgePanel() {
                 ))}
               </select>
             </div>
-            <span className="mt-1 block pl-1 text-xs text-fg-tertiary">
+            <span className="mt-1 flex items-center gap-1.5 pl-1 text-xs text-fg-tertiary">
+              <ChainIcon chainId={swapChainNumericId(fromChain)} size={14} />
               From · {chainName(fromChain)}
             </span>
           </div>
@@ -263,7 +269,11 @@ export function BridgePanel() {
               Destination chain
             </label>
             <div className="relative">
-              <Network className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
+              <ChainIcon
+                chainId={swapChainNumericId(toChain)}
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-secondary"
+              />
               <select
                 id="to-chain"
                 value={toChain}
@@ -277,7 +287,8 @@ export function BridgePanel() {
                 ))}
               </select>
             </div>
-            <span className="mt-1 block pl-1 text-xs text-fg-tertiary">
+            <span className="mt-1 flex items-center gap-1.5 pl-1 text-xs text-fg-tertiary">
+              <ChainIcon chainId={swapChainNumericId(toChain)} size={14} />
               To · {chainName(toChain)}
             </span>
           </div>

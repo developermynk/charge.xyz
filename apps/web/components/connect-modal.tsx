@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Wallet, ChevronRight, ShieldCheck } from "lucide-react";
+import { Mail, ChevronRight, ShieldCheck } from "lucide-react";
 import * as React from "react";
 
 import { Button, Modal, StatusLine } from "@charge/ui";
@@ -11,6 +11,8 @@ import {
   usePrivyBridge,
   useWallet,
 } from "@charge/web3";
+import { WalletIcon } from "@/components/app/token-icon";
+import { walletIconKey } from "@charge/chains/icons";
 
 /**
  * Minimal error boundary. Used to isolate the Privy-dependent email section so
@@ -254,7 +256,22 @@ export function ConnectModal({
                 className="group flex w-full items-center gap-4 rounded-2xl border border-fg/10 bg-fg/[0.03] p-4 text-left transition-all duration-200 hover:border-fg/20 hover:bg-fg/[0.07] disabled:opacity-50"
               >
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-fg/[0.06] text-fg-secondary">
-                  <Wallet className="size-5" aria-hidden />
+                  {connector.icon ? (
+                    // Genuine brand mark provided by wagmi/Reown.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={connector.icon}
+                      alt={connector.name}
+                      className="size-6"
+                      aria-hidden
+                    />
+                  ) : (
+                    <WalletIcon
+                      connectorId={connector.id}
+                      size={22}
+                      className="text-fg-secondary"
+                    />
+                  )}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold text-fg">
