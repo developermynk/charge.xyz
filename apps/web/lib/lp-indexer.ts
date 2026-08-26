@@ -33,7 +33,15 @@ import {
 } from "@charge/chains";
 import { listGraduatedTokens } from "@/lib/launchpad";
 
-const DATA_DIR = join(process.cwd(), ".data");
+function dataDir(): string {
+  // Vercel serverless fs is read-only except /tmp
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return "/tmp/.data";
+  }
+  return join(process.cwd(), ".data");
+}
+
+const DATA_DIR = dataDir();
 const CACHE_FILE = join(DATA_DIR, "lp-stats.json");
 const CACHE_TTL_MS = 60_000; // re-scan at most once per minute
 

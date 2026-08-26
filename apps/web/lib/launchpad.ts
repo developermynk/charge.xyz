@@ -29,7 +29,15 @@ import {
   LAUNCHPAD_EVENTS_ABI,
 } from "@charge/sdk";
 
-const DATA_DIR = join(process.cwd(), ".data");
+function dataDir(): string {
+  // Vercel serverless fs is read-only except /tmp
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return "/tmp/.data";
+  }
+  return join(process.cwd(), ".data");
+}
+
+const DATA_DIR = dataDir();
 const DATA_FILE = join(DATA_DIR, "launchpad.json");
 const CHECKPOINT_FILE = join(DATA_DIR, "launchpad-checkpoint.json");
 
