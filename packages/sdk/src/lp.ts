@@ -435,8 +435,12 @@ export async function quoteRemoveLiquidity(
   const liquidity = parseUnits(lpAmount, 18); // LP token is 18dp
   if (liquidity <= 0n) throw new Error("Enter an amount greater than zero.");
   const pos = await getLpPosition(tokenA, tokenB, user);
-  const outA = (pos.reserve0 * liquidity) / pos.totalSupply;
-  const outB = (pos.reserve1 * liquidity) / pos.totalSupply;
+  // Map pair reserves (reserve0/reserve1) to tokenA/tokenB order.
+  const aIsToken0 = getAddress(metaA.address) === getAddress(pos.token0);
+  const reserveA = aIsToken0 ? pos.reserve0 : pos.reserve1;
+  const reserveB = aIsToken0 ? pos.reserve1 : pos.reserve0;
+  const outA = (reserveA * liquidity) / pos.totalSupply;
+  const outB = (reserveB * liquidity) / pos.totalSupply;
   const minA = (outA * BigInt(10000 - slippageBps)) / 10000n;
   const minB = (outB * BigInt(10000 - slippageBps)) / 10000n;
   return {
