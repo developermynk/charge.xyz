@@ -127,6 +127,20 @@ export function QrScanner({
       /* decode errors while scanning — ignore */
     };
 
+    // Dynamic qrbox: html5-qrcode can silently fail to decode on mobile when
+    // the scan box is a fixed pixel size larger than the live viewfinder
+    // (phone cameras are often landscape/odd aspect). A function qrbox scales
+    // to the actual rendered frame so the region stays valid and decoding runs.
+    const qrbox = (
+      viewfinderWidth: number,
+      viewfinderHeight: number,
+    ): { width: number; height: number } => {
+      const min = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7);
+      const size = Math.max(120, min);
+      return { width: size, height: size };
+    };
+    const scanConfig = { fps: 15, qrbox };
+
     // Robust camera selection: try back camera, then any facing mode,
     // then the explicit device list. `exact: "environment"` throws
     // OverconstrainedError on many phones, so we MUST fall back instead
@@ -142,7 +156,7 @@ export function QrScanner({
         try {
           await scanner.start(
             cfg,
-            { fps: 10, qrbox: { width: 240, height: 240 } },
+            scanConfig,
             onScan,
             onErr,
           );
@@ -176,7 +190,7 @@ export function QrScanner({
           const back: { id: string; label: string } = found ?? cams[0]!;
           await scanner.start(
             back.id,
-            { fps: 10, qrbox: { width: 240, height: 240 } },
+            scanConfig,
             onScan,
             onErr,
           );
