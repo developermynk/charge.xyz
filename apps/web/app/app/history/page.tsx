@@ -16,11 +16,10 @@ import { formatUnits } from "viem";
 import { Badge, Card, Skeleton, StatusLine } from "@charge/ui";
 import {
   ALL_CHAIN_IDS,
-  ARC_CHAIN_ID,
   EVM_CHAIN_BY_ID,
 } from "@charge/chains";
 import { getTxHistory, type TxType } from "@charge/sdk";
-import { useWallet, useChainActivity } from "@charge/web3";
+import { useWallet, fetchChainHistory, type ExplorerTx } from "@charge/web3";
 
 import { ChainIcon } from "@/components/app/token-icon";
 
@@ -51,9 +50,36 @@ export default function HistoryPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, [address]);
 
-  // On-chain activity across every listed chain (send/receive via Transfer).
+  // Real on-chain history from each chain's explorer (keyless Blockscout).
+  const [explorer, setExplorer] = React.useState<ExplorerTx[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [explorerDown, setExplorerDown] = React.useState(false);
+
   const chainsToScan = chain === "all" ? ALL_CHAIN_IDS : [chain];
-  const chainActivity = useChainActivityAggregator(address, chainsToScan);
+
+  React.useEffect(() => {
+    if (!address) {
+      setExplorer([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    fetchChainHistory(address)
+      .then((txs) => {
+        if (cancelled) return;
+        setExplorer(txs);
+        setExplorerDown(txs.length === 0);
+      })
+      .catch(() => {
+        if (!cancelled) setExplorerDown(true);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [address, chainsToScan.join(",")]);
 
   const rows = React.useMemo<Row[]>(() => {
     const out: Row[] = [];
@@ -69,15 +95,17 @@ export default function HistoryPage() {
       });
     }
 
-    for (const ca of chainActivity.items) {
-      const def = EVM_CHAIN_BY_ID.get(ca.chainId);
+    for (const tx of explorer) {
+      if (!chainsToScan.includes(tx.chainId)) continue;
+      const def = EVM_CHAIN_BY_ID.get(tx.chainId);
+      const amount = formatUnits(tx.valueRaw, tx.decimals);
       out.push({
-        id: `${ca.hash}:${ca.direction}`,
-        type: ca.direction,
-        chainId: ca.chainId,
-        hash: ca.hash,
-        ts: new Date().toISOString(),
-        summary: `${ca.direction} ${formatUnits(ca.valueRaw, ca.decimals)} ${ca.symbol}${def ? ` on ${def.name}` : ""}`,
+        id: `${tx.hash}:${tx.direction}`,
+        type: tx.direction,
+        chainId: tx.chainId,
+        hash: tx.hash,
+        ts: tx.timestamp,
+        summary: `${tx.direction} ${amount} ${tx.symbol}${def ? ` on ${def.name}` : ""}`,
       });
     }
 
@@ -85,9 +113,9 @@ export default function HistoryPage() {
       .filter((r) => (type === "all" ? true : r.type === type))
       .filter((r) => (chain === "all" ? true : r.chainId === chain))
       .sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0));
-  }, [local, chainActivity.items, type, chain]);
+  }, [local, explorer, type, chain, chainsToScan]);
 
-  const anyRpcDown = chainActivity.rpcErrors.length > 0;
+  const anyRpcDown = explorerDown;
 
   return (
     <div className="space-y-6">
@@ -162,8 +190,7 @@ export default function HistoryPage() {
         </StatusLine>
       ) : (
         <Card className="divide-y divide-fg/[0.06] overflow-hidden">
-          {chainActivity.sources}
-          {chainActivity.isLoading && local.length === 0 ? (
+          {isLoading && local.length === 0 && explorer.length === 0 ? (
             <div className="space-y-3 p-4">
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
@@ -180,8 +207,8 @@ export default function HistoryPage() {
 
       {anyRpcDown && (
         <p className="text-xs text-fg-tertiary">
-          Some chains&apos; on-chain history is unavailable (RPC unreachable
-          from here). In-app swap/bridge/send records are always shown.
+          Some chains&apos; on-chain history is unavailable (explorer API
+          unreachable). In-app swap/bridge/send records are always shown.
         </p>
       )}
     </div>
@@ -272,69 +299,6 @@ function FilterChip({
       {children}
     </button>
   );
-}
-
-/** Aggregate on-chain activity across chains. Each chain gets its OWN hook
- *  call via a dedicated child component — hooks must never be called inside a
- *  loop/map (react-hooks/rules-of-hooks). */
-function useChainActivityAggregator(
-  address: `0x${string}` | undefined,
-  chainIds: readonly number[],
-) {
-  const [items, setItems] = React.useState<
-    Array<{ hash: string; direction: "send" | "receive"; chainId: number; symbol: string; valueRaw: bigint; decimals: number }>
-  >([]);
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [rpcErrors, setRpcErrors] = React.useState<number[]>([]);
-
-  const sources = chainIds.map((id) => (
-    <ChainActivitySource
-      key={id}
-      address={address}
-      chainId={id}
-      onData={(it) => setItems((prev) => merge(prev, it))}
-      onLoading={setIsLoading}
-      onRpcError={(cid) => setRpcErrors((prev) => prev.includes(cid) ? prev : [...prev, cid])}
-    />
-  ));
-
-  return { items, isLoading, rpcErrors, sources };
-}
-
-/** Calls useChainActivity exactly once (rules-of-hooks safe) and reports up. */
-function ChainActivitySource({
-  address,
-  chainId,
-  onData,
-  onLoading,
-  onRpcError,
-}: {
-  address: `0x${string}` | undefined;
-  chainId: number;
-  onData: (items: Array<{ hash: string; direction: "send" | "receive"; chainId: number; symbol: string; valueRaw: bigint; decimals: number }>) => void;
-  onLoading: (v: boolean) => void;
-  onRpcError: (chainId: number) => void;
-}) {
-  const act = useChainActivity({ chainId, address });
-  React.useEffect(() => {
-    onData(act.items.map((it) => ({ ...it, chainId })));
-  }, [act.items, chainId, onData]);
-  React.useEffect(() => {
-    onLoading(act.isLoading);
-  }, [act.isLoading, onLoading]);
-  React.useEffect(() => {
-    if (act.rpcError) onRpcError(chainId);
-  }, [act.rpcError, chainId, onRpcError]);
-  return null;
-}
-
-function merge(
-  prev: Array<{ hash: string; direction: "send" | "receive"; chainId: number; symbol: string; valueRaw: bigint; decimals: number }>,
-  next: Array<{ hash: string; direction: "send" | "receive"; chainId: number; symbol: string; valueRaw: bigint; decimals: number }>,
-) {
-  const map = new Map(prev.map((i) => [i.hash + i.direction, i]));
-  for (const i of next) map.set(i.hash + i.direction, i);
-  return Array.from(map.values());
 }
 
 function shortTime(iso: string): string {

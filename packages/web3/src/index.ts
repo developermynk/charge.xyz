@@ -46,3 +46,7 @@ export {
   type ChainActivity,
   type ActivityItem,
 } from "./use-chain-activity.ts";
+export {
+  fetchChainHistory,
+  type ExplorerTx,
+} from "./use-explorer-history.ts";
