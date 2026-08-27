@@ -39,6 +39,8 @@ interface ApiItem {
   from: string;
   to: string;
   value: string;
+  decimals: number;
+  symbol: string;
   timestamp: string;
 }
 
@@ -71,8 +73,8 @@ export async function fetchChainHistory(
     const from = getAddress(tx.from || address);
     const to = getAddress(tx.to || address);
     const isOut = isAddressEqual(from, me);
-    const decimals = tx.chainId === 5042002 ? 6 : 18;
-    const symbol = EVM_CHAIN_BY_ID.get(tx.chainId)?.nativeSymbol ?? "ETH";
+    const decimals = Number(tx.decimals ?? 18);
+    const symbol = tx.symbol || EVM_CHAIN_BY_ID.get(tx.chainId)?.nativeSymbol || "ETH";
     return {
       hash: tx.hash as Hash,
       chainId: tx.chainId,
