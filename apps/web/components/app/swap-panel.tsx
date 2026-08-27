@@ -250,42 +250,42 @@ export function SwapPanel() {
         const provider = await getProvider();
         if (!provider) throw new Error("Connect a wallet to see a quote.");
 
-        const est = usesVaultSwap(selectedChain, effectiveIn, effectiveOut)
-          ? await quoteVaultSwap({
-              provider: provider as never,
-              address: address as `0x${string}`,
-              chain: selectedChain,
-              tokenIn: effectiveIn,
-              tokenOut: effectiveOut,
-              tokenInAddress: customIn?.address,
-              tokenOutAddress: customOut?.address,
-              tokenInDecimals: customIn?.decimals,
-              tokenOutDecimals: customOut?.decimals,
-              amountIn: debouncedAmount,
-              slippageBps,
-            })
-          : usesAmmSwap(selectedChain, effectiveIn, effectiveOut)
-            ? await quoteAmmSwap({
-              provider: provider as never,
-              address: address as `0x${string}`,
-              chain: selectedChain,
-              tokenIn: effectiveIn,
-              tokenOut: effectiveOut,
-              tokenInAddress: customIn?.address,
-              tokenOutAddress: customOut?.address,
-              tokenInDecimals: customIn?.decimals,
-              tokenOutDecimals: customOut?.decimals,
-              amountIn: debouncedAmount,
-              slippageBps,
-            })
-            : await estimateSwap({
-              provider,
-              address: address as `0x${string}`,
-              chain: selectedChain,
-              tokenIn: effectiveIn,
-              tokenOut: effectiveOut,
-              amountIn: debouncedAmount,
-            });
+        // Routing priority (per Chargefi architecture): AMM-primary,
+        // vault-fallback. The AMM (Uniswap-V2 on Arc) holds the public pool
+        // liquidity that Pools seeds — so we quote it FIRST. Only fall back to
+        // the inventory vault (USDC/EURC/cirBTC) when the AMM has no pair or
+        // no reserves for this route (e.g. cirBTC, which has no AMM pool).
+        // Previously the vault was checked first, which bypassed Pools
+        // liquidity entirely and surfaced "insufficient liquidity" for pairs
+        // that were perfectly tradable on the AMM.
+        const req = {
+          provider: provider as never,
+          address: address as `0x${string}`,
+          chain: selectedChain,
+          tokenIn: effectiveIn,
+          tokenOut: effectiveOut,
+          tokenInAddress: customIn?.address,
+          tokenOutAddress: customOut?.address,
+          tokenInDecimals: customIn?.decimals,
+          tokenOutDecimals: customOut?.decimals,
+          amountIn: debouncedAmount,
+          slippageBps,
+        };
+        let est: SwapEstimate;
+        if (usesAmmSwap(selectedChain, effectiveIn, effectiveOut)) {
+          try {
+            est = await quoteAmmSwap(req);
+          } catch {
+            // AMM has no pair / no reserves — fall back to the vault if eligible.
+            est = usesVaultSwap(selectedChain, effectiveIn, effectiveOut)
+              ? await quoteVaultSwap(req)
+              : await estimateSwap({ provider, address: address as `0x${string}`, chain: selectedChain, tokenIn: effectiveIn, tokenOut: effectiveOut, amountIn: debouncedAmount });
+          }
+        } else if (usesVaultSwap(selectedChain, effectiveIn, effectiveOut)) {
+          est = await quoteVaultSwap(req);
+        } else {
+          est = await estimateSwap({ provider, address: address as `0x${string}`, chain: selectedChain, tokenIn: effectiveIn, tokenOut: effectiveOut, amountIn: debouncedAmount });
+        }
         if (cancelled) return;
         setEstimate(est);
         setPhase("idle");
@@ -329,42 +329,25 @@ export function SwapPanel() {
       const provider = await getProvider();
       if (!provider) throw new Error("No wallet provider available.");
 
-      const res = usesVaultSwap(selectedChain, effectiveIn, effectiveOut)
-        ? await executeVaultSwap({
-            provider: provider as never,
-            address: address as `0x${string}`,
-            chain: selectedChain,
-            tokenIn: effectiveIn,
-            tokenOut: effectiveOut,
-            tokenInAddress: customIn?.address,
-            tokenOutAddress: customOut?.address,
-            tokenInDecimals: customIn?.decimals,
-            tokenOutDecimals: customOut?.decimals,
-            amountIn,
-            slippageBps,
-          })
-        : usesAmmSwap(selectedChain, effectiveIn, effectiveOut)
-          ? await executeAmmSwap({
-            provider: provider as never,
-            address: address as `0x${string}`,
-            chain: selectedChain,
-            tokenIn: effectiveIn,
-            tokenOut: effectiveOut,
-            tokenInAddress: customIn?.address,
-            tokenOutAddress: customOut?.address,
-            tokenInDecimals: customIn?.decimals,
-            tokenOutDecimals: customOut?.decimals,
-            amountIn,
-            slippageBps,
-          })
-          : await executeSwap({
-            provider,
-            address: address as `0x${string}`,
-            chain: selectedChain,
-            tokenIn: effectiveIn,
-            tokenOut: effectiveOut,
-            amountIn,
-          });
+      // Execute: same AMM-primary / vault-fallback routing as the quote.
+      const execReq = {
+        provider: provider as never,
+        address: address as `0x${string}`,
+        chain: selectedChain,
+        tokenIn: effectiveIn,
+        tokenOut: effectiveOut,
+        tokenInAddress: customIn?.address,
+        tokenOutAddress: customOut?.address,
+        tokenInDecimals: customIn?.decimals,
+        tokenOutDecimals: customOut?.decimals,
+        amountIn,
+        slippageBps,
+      };
+      const res = usesAmmSwap(selectedChain, effectiveIn, effectiveOut)
+        ? await executeAmmSwap(execReq)
+        : usesVaultSwap(selectedChain, effectiveIn, effectiveOut)
+          ? await executeVaultSwap(execReq)
+          : await executeSwap({ provider, address: address as `0x${string}`, chain: selectedChain, tokenIn: effectiveIn, tokenOut: effectiveOut, amountIn });
 
       setTxHash(res.txHash ?? null);
       if (res.txHash) {
