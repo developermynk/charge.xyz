@@ -17,6 +17,7 @@ export const APP_NAV: NavItem[] = [
   { href: "/app/bridge", label: "Bridge" },
   { href: "/app/send", label: "Send" },
   { href: "/app/receive", label: "Receive" },
+  { href: "/app/history", label: "History" },
   { href: "/app/market", label: "Market" },
   { href: "/app/create", label: "Launch" },
 ];

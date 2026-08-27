@@ -1,6 +1,6 @@
 "use client";
 
-import { Coins, Fuel, Network, Send, Waypoints, Layers, TrendingUp } from "lucide-react";
+import { Coins, Fuel, History, Network, Send, Waypoints, Layers, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -48,6 +48,7 @@ export default function OverviewPage() {
           <ActionTile href="/app/bridge" icon={<Layers className="size-5" />} title="Bridge" body="Move USDC via CCTP" />
           <ActionTile href="/app/send" icon={<Send className="size-5" />} title="Send" body="Transfer to any address" />
           <ActionTile href="/app/receive" icon={<Network className="size-5" />} title="Receive" body="Your address as QR" />
+          <ActionTile href="/app/history" icon={<History className="size-5" />} title="History" body="All swaps, bridges & sends" />
           <ActionTile href="/app/market" icon={<TrendingUp className="size-5" />} title="Market" body="Trending & launches" />
           <ActionTile href="/app/create" icon={<Coins className="size-5" />} title="Launch token" body="Deploy a fixed supply" />
         </div>

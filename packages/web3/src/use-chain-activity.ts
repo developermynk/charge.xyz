@@ -144,9 +144,46 @@ export function useChainActivity({
         void onUsdcContract;
       }
 
-      // 2) Arc native-value transfers (no ERC-20 log). Scan all recent
-      //    Transfer logs; any touching our address on a non-USDC contract with
-      //    non-zero value is a native USDC move.
+      // 2) Native-value transfers (no ERC-20 log). On Arc, USDC IS the native
+      //    gas token, so every Send you do is a value transfer with NO Transfer
+      //    event — getLogs filtered by the wallet address catches both outgoing
+      //    and incoming native moves. Wrapped in try/catch: several testnet RPCs
+      //    reject broad log queries, and we must not blank the page over that.
+      try {
+        const nativeOut = await client.getLogs({
+          fromBlock,
+          toBlock: head,
+          address: addr,
+        });
+        for (const log of nativeOut as Log[]) {
+          if (!log.transactionHash) continue;
+          if (collected.has(log.transactionHash)) continue;
+          // A log with no topics on a native-value tx is the value transfer.
+          if (log.topics.length > 0) continue;
+          const tx = await client.getTransaction({
+            hash: log.transactionHash,
+          });
+          const value = tx.value ?? 0n;
+          if (value === 0n) continue;
+          const fromA = getAddress((tx.from ?? addr) as `0x${string}`);
+          const toA = getAddress((tx.to ?? addr) as `0x${string}`);
+          if (!isAddressEqual(fromA, addr) && !isAddressEqual(toA, addr)) continue;
+          collected.set(log.transactionHash, {
+            hash: log.transactionHash,
+            direction: isAddressEqual(fromA, addr) ? "send" : "receive",
+            counterparty: isAddressEqual(fromA, addr) ? toA : fromA,
+            symbol: isArc ? "USDC" : "ETH",
+            valueRaw: value,
+            decimals: isArc ? 6 : 18,
+          });
+        }
+      } catch {
+        // Native scan unsupported on this RPC — fall through to whatever we have.
+      }
+
+      // 3) Arc native-value transfers via the ERC-20 Transfer log fallback
+      //    (legacy path): scan recent Transfer logs; any touching our address on
+      //    a non-USDC contract with non-zero value is a native USDC move.
       if (isArc) {
         const nativeLogs = await client.getLogs({
           fromBlock,
