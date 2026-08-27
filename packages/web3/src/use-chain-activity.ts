@@ -76,8 +76,13 @@ export function useChainActivity({
 
       const collected = new Map<Hash, ActivityItem>();
 
-      // 1) ERC-20 Transfer logs touching our address (token moves).
-      const logs = await client.getLogs({
+      // 1) ERC-20 Transfer logs. Query outgoing and incoming SEPARATELY —
+      //    combining them in one `args: { from, to }` filter collapses to
+      //    self-transfers (from == to), which is why history was always empty.
+      //    viem ORs indexed args across the filter when passed as a single
+      //    object, but a user is very rarely both sender and recipient, so we
+      //    must scan each direction on its own.
+      const outLogs = await client.getLogs({
         fromBlock,
         toBlock: head,
         event: {
@@ -89,8 +94,23 @@ export function useChainActivity({
             { name: "value", type: "uint256", indexed: false },
           ],
         },
-        args: { from: addr, to: addr },
+        args: { from: addr },
       });
+      const inLogs = await client.getLogs({
+        fromBlock,
+        toBlock: head,
+        event: {
+          type: "event",
+          name: "Transfer",
+          inputs: [
+            { name: "from", type: "address", indexed: true },
+            { name: "to", type: "address", indexed: true },
+            { name: "value", type: "uint256", indexed: false },
+          ],
+        },
+        args: { to: addr },
+      });
+      const logs = [...(outLogs as Log[]), ...(inLogs as Log[])];
 
       for (const log of logs as Log[]) {
         if (!log.transactionHash) continue;

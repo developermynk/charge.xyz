@@ -4,6 +4,7 @@ import {
   ArrowLeftRight,
   Coins,
   Droplets,
+  History,
   LayoutDashboard,
   LogOut,
   QrCode,
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/app/bridge", label: "Bridge", icon: Waypoints },
   { href: "/app/send", label: "Send", icon: Send },
   { href: "/app/receive", label: "Receive", icon: QrCode },
+  { href: "/app/history", label: "History", icon: History },
   { href: "/app/market", label: "Market", icon: TrendingUp },
   { href: "/app/create", label: "Launch token", icon: Coins },
 ];

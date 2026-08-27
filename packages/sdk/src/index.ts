@@ -68,6 +68,13 @@ export {
   type TransferRequest,
 } from "./transfer.ts";
 export {
+  recordTx,
+  getTxHistory,
+  removeTx,
+  type TxRecord,
+  type TxType,
+} from "./tx-history.ts";
+export {
   LAUNCHPAD_ADDRESSES,
   LAUNCHPAD_ABI,
   LAUNCHPAD_EVENTS_ABI,

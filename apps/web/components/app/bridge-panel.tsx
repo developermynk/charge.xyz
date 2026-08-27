@@ -29,6 +29,7 @@ import {
 import {
   BRIDGE_STAGES,
   executeBridge,
+  recordTx,
   humanizeBridgeError,
   type BridgeStageId,
   type BridgeStepInfo,
@@ -191,6 +192,17 @@ export function BridgePanel() {
       );
 
       setTxHash(result.txHash ?? null);
+      if (result.txHash) {
+        recordTx(address, {
+          id: `${result.txHash}:bridge`,
+          type: "bridge",
+          chainId: swapChainNumericId(fromChain) ?? ARC_CHAIN_ID,
+          hash: result.txHash,
+          ts: new Date().toISOString(),
+          summary: `Bridge ${amount} USDC: ${chainName(fromChain)} → ${chainName(toChain)}`,
+          counterparty: chainName(toChain),
+        });
+      }
       setDestinationTxHash(result.destinationTxHash ?? null);
       setSteps(result.steps);
       if (result.state === "success") {

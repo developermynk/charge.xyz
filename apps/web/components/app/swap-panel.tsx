@@ -36,6 +36,7 @@ import {
   quoteVaultSwap,
   executeVaultSwap,
   readTokenMeta,
+  recordTx,
   type SwapEstimate,
 } from "@charge/sdk";
 import { useWallet, useTokenBalance } from "@charge/web3";
@@ -366,6 +367,17 @@ export function SwapPanel() {
           });
 
       setTxHash(res.txHash ?? null);
+      if (res.txHash) {
+        recordTx(address, {
+          id: `${res.txHash}:swap`,
+          type: "swap",
+          chainId: swapChainNumericId(selectedChain) ?? ARC_CHAIN_ID,
+          hash: res.txHash,
+          ts: new Date().toISOString(),
+          summary: `Swap ${amountIn} ${tokenIn} → ${tokenOut}`,
+          counterparty: tokenOut,
+        });
+      }
       setPhase("done");
       setAmountIn("");
       setEstimate(null);

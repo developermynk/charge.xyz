@@ -27,6 +27,7 @@ import {
 import {
   transfer,
   waitForTransfer,
+  recordTx,
   humanizeTransferError,
   type TransferAsset,
 } from "@charge/sdk";
@@ -223,6 +224,15 @@ export function SendPanel() {
       });
 
       setTxHash(hash);
+      recordTx(address, {
+        id: `${hash}:send`,
+        type: "send",
+        chainId: selectedNumeric ?? ARC_CHAIN_ID,
+        hash,
+        ts: new Date().toISOString(),
+        summary: `${amount} ${current.label} → ${to.slice(0, 6)}…${to.slice(-4)}`,
+        counterparty: to,
+      });
       setPhase("pending");
 
       await waitForTransfer(hash, selectedNumeric);
