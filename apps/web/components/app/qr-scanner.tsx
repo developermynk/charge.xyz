@@ -91,6 +91,13 @@ export function QrScanner({
 
     setError(null);
     setPhase("starting");
+  }, [onClose, onResult, stop]);
+
+  // Start the camera after the "starting" phase renders the qr-reader-region element
+  React.useEffect(() => {
+    if (phase !== "starting") return;
+
+    let cancelled = false;
 
     const secure =
       typeof window !== "undefined" &&
@@ -112,9 +119,10 @@ export function QrScanner({
 
     scanner
       .start(
-        { facingMode: "environment" },
+        { facingMode: { exact: "environment" } },
         { fps: 10, qrbox: { width: 240, height: 240 } },
         (decoded) => {
+          if (cancelled) return;
           void stop();
           onResult(decoded);
           onClose();
@@ -123,14 +131,21 @@ export function QrScanner({
           /* decode errors while scanning — ignore */
         },
       )
-      .then(() => setPhase("live"))
+      .then(() => {
+        if (!cancelled) setPhase("live");
+      })
       .catch((err: unknown) => {
+        if (cancelled) return;
         startedRef.current = false;
         const msg = err instanceof Error ? err.message : String(err);
         setError(diagnoseCameraError(msg));
         setPhase("error");
       });
-  }, [onClose, onResult, stop]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, onClose, onResult, stop]);
 
   return (
     <Modal open={open} onClose={onClose} title="Scan a QR code">

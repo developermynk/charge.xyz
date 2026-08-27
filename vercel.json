@@ -3,5 +3,16 @@
   "outputDirectory": "apps/web/.next",
   "devCommand": "cd apps/web && npm run dev",
   "installCommand": "pnpm install",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "headers": [
+    {
+      "source": "/app/send(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=()"
+        }
+      ]
+    }
+  ]
 }
