@@ -1,6 +1,6 @@
 "use client";
 
-import { Html5Qrcode } from "html5-qrcode";
+import jsQR from "jsqr";
 import { Camera, RefreshCw, X } from "lucide-react";
 import * as React from "react";
 
@@ -12,13 +12,11 @@ import { Button, Modal } from "@charge/ui";
  * Professional two-step flow (matches Coinbase / Uniswap / Binance):
  *   1. A pre-prompt card explains WHY camera access is needed and shows an
  *      "Enable camera" button. We do NOT call getUserMedia until the user
- *      taps it — so the browser's native Allow/Deny appears in context, not
- *      as a surprise the moment the modal opens.
- *   2. On tap we start the camera. Success → live viewfinder + scan.
- *      Failure (denied / no camera / insecure) → an accurate message plus a
- *      "Try camera again" button that re-attempts, so once the user fixes
- *      permission in their browser settings a single tap re-opens the camera.
- *      A manual-entry fallback is always available so Send is never blocked.
+ *      taps it — so the browser's native Allow/Deny appears in context.
+ *   2. On tap we open the camera with the native getUserMedia API and decode
+ *      frames with jsQR in a requestAnimationFrame loop. This is far more
+ *      reliable on mobile than html5-qrcode's auto-decode, which silently
+ *      fails to match on many phones even with a valid qrbox.
  *
  * Privacy/security: no frames leave the browser. The stream is stopped the
  * moment the modal closes or a code is found.
@@ -32,24 +30,25 @@ export function QrScanner({
   onClose: () => void;
   onResult: (text: string) => void;
 }) {
-  const [phase, setPhase] = React.useState<"prompt" | "starting" | "live" | "error">(
-    "prompt",
-  );
+  const [phase, setPhase] = React.useState<
+    "prompt" | "starting" | "live" | "error"
+  >("prompt");
   const [error, setError] = React.useState<string | null>(null);
   const [manual, setManual] = React.useState("");
-  const regionRef = React.useRef<HTMLDivElement>(null);
-  const scannerRef = React.useRef<Html5Qrcode | null>(null);
-  const startedRef = React.useRef(false);
 
-  const stop = React.useCallback(async () => {
-    startedRef.current = false;
-    try {
-      await scannerRef.current?.stop();
-      scannerRef.current?.clear();
-    } catch {
-      /* already stopped */
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const rafRef = React.useRef<number | null>(null);
+
+  const stop = React.useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     }
-    scannerRef.current = null;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
   // Reset to the pre-prompt state every time the modal opens; meanwhile
@@ -69,7 +68,7 @@ export function QrScanner({
           if (cancelled) return;
           if (status.state === "denied") {
             setError(
-              "Camera is blocked for this site. Open Chrome's site settings (⋮ → Site settings → Camera) and set it to Allow, then tap “Try camera again”. Or enter the address manually below.",
+              "Camera is blocked for this site. Open your browser's site settings and set Camera to Allow, then tap “Try camera again”. Or enter the address manually below.",
             );
             setPhase("error");
           }
@@ -86,14 +85,11 @@ export function QrScanner({
   }, [open, stop]);
 
   const startCamera = React.useCallback(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-
     setError(null);
     setPhase("starting");
-  }, [onClose, onResult, stop]);
+  }, []);
 
-  // Start the camera after the "starting" phase renders the qr-reader-region element
+  // Open the camera after the "starting" phase renders the <video> element.
   React.useEffect(() => {
     if (phase !== "starting") return;
 
@@ -106,7 +102,6 @@ export function QrScanner({
         location.hostname === "127.0.0.1");
 
     if (!secure) {
-      startedRef.current = false;
       setError(
         "Camera needs HTTPS. Open the app over https (or localhost) to scan, or enter the address manually below.",
       );
@@ -114,98 +109,106 @@ export function QrScanner({
       return;
     }
 
-    const scanner = new Html5Qrcode("qr-reader-region");
-    scannerRef.current = scanner;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) {
+      setError("Scanner failed to initialize. Enter the address manually below.");
+      setPhase("error");
+      return;
+    }
 
-    const onScan = (decoded: string) => {
-      if (cancelled) return;
-      void stop();
-      onResult(decoded);
-      onClose();
-    };
-    const onErr = () => {
-      /* decode errors while scanning — ignore */
-    };
+    // Robust camera selection: exact back → any back → front.
+    const attempts: MediaTrackConstraints[] = [
+      { facingMode: { exact: "environment" } },
+      { facingMode: "environment" },
+      { facingMode: "user" },
+    ];
 
-    // Dynamic qrbox: html5-qrcode can silently fail to decode on mobile when
-    // the scan box is a fixed pixel size larger than the live viewfinder
-    // (phone cameras are often landscape/odd aspect). A function qrbox scales
-    // to the actual rendered frame so the region stays valid and decoding runs.
-    const qrbox = (
-      viewfinderWidth: number,
-      viewfinderHeight: number,
-    ): { width: number; height: number } => {
-      const min = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7);
-      const size = Math.max(120, min);
-      return { width: size, height: size };
-    };
-    const scanConfig = { fps: 15, qrbox };
-
-    // Robust camera selection: try back camera, then any facing mode,
-    // then the explicit device list. `exact: "environment"` throws
-    // OverconstrainedError on many phones, so we MUST fall back instead
-    // of dying — that was the bug keeping the scanner broken everywhere.
     (async () => {
-      const attempts: Array<string | MediaTrackConstraints> = [
-        { facingMode: { exact: "environment" } },
-        { facingMode: "environment" },
-        { facingMode: "user" },
-      ];
+      let stream: MediaStream | null = null;
+      let lastErr = "";
 
       for (const cfg of attempts) {
         try {
-          await scanner.start(
-            cfg,
-            scanConfig,
-            onScan,
-            onErr,
-          );
-          if (!cancelled) setPhase("live");
-          return;
+          stream = await navigator.mediaDevices.getUserMedia({ video: cfg });
+          break;
         } catch (e) {
-          await scanner.stop().catch(() => {});
-          try {
-            scanner.clear();
-          } catch {
-            /* ignore */
-          }
-          const m = (e instanceof Error ? e.message : String(e)).toLowerCase();
-          // constraint/device errors → try next camera config
-          if (/overconstrained|notfound|notreadable|nodet|not a cam/i.test(m)) {
+          const m = e instanceof Error ? e.message : String(e);
+          lastErr = m;
+          const ml = m.toLowerCase();
+          // constraint / device errors → try next camera config
+          if (/overconstrained|notfound|notreadable|nodet|not a cam/i.test(ml)) {
             continue;
           }
           // permission / insecure / other hard error → surface and stop
-          startedRef.current = false;
-          setError(diagnoseCameraError(m));
+          setError(diagnoseCameraError(ml));
           setPhase("error");
           return;
         }
       }
 
-      // All facingMode attempts failed — enumerate devices and pick one.
-      try {
-        const cams = await Html5Qrcode.getCameras();
-        if (cams && cams.length > 0) {
-          const found = cams.find((c) => /back|rear|environment/i.test(c.label));
-          const back: { id: string; label: string } = found ?? cams[0]!;
-          await scanner.start(
-            back.id,
-            scanConfig,
-            onScan,
-            onErr,
-          );
-          if (!cancelled) setPhase("live");
-          return;
-        }
-      } catch {
-        /* fall through to error */
+      if (!stream) {
+        setError(
+          lastErr
+            ? diagnoseCameraError(lastErr)
+            : "No camera is available on this device, or it is in use by another app. Enter the address manually below.",
+        );
+        setPhase("error");
+        return;
       }
 
-      startedRef.current = false;
-      setError(
-        "No camera is available on this device, or it is in use by another app. Enter the address manually below.",
-      );
-      setPhase("error");
+      if (cancelled) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      streamRef.current = stream;
+      video.srcObject = stream;
+      video.setAttribute("playsinline", "true");
+      video.muted = true;
+
+      try {
+        await video.play();
+      } catch {
+        /* some browsers need a tick; the loop checks readyState anyway */
+      }
+
+      setPhase("live");
+
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) {
+        setError("Scanner could not start. Enter the address manually below.");
+        setPhase("error");
+        return;
+      }
+
+      const tick = () => {
+        if (cancelled) return;
+        if (video.readyState >= 2 && video.videoWidth > 0) {
+          const w = video.videoWidth;
+          const h = video.videoHeight;
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(video, 0, 0, w, h);
+          let data: ImageData | null = null;
+          try {
+            data = ctx.getImageData(0, 0, w, h);
+          } catch {
+            /* tainted frame — skip */
+          }
+          if (data) {
+            const found = jsQR(data.data, data.width, data.height);
+            if (found?.data) {
+              stop();
+              onResult(found.data);
+              onClose();
+              return;
+            }
+          }
+        }
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
     })();
 
     return () => {
@@ -218,11 +221,15 @@ export function QrScanner({
       <div className="space-y-4">
         {/* Live viewfinder (only while starting/live). */}
         {phase !== "prompt" && phase !== "error" && (
-          <div
-            id="qr-reader-region"
-            ref={regionRef}
-            className="mx-auto min-h-[260px] w-full max-w-sm overflow-hidden rounded-2xl bg-black/40"
-          />
+          <div className="mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-2xl bg-black/40">
+            <video
+              ref={videoRef}
+              className="h-full w-full object-cover"
+              playsInline
+              muted
+            />
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
         )}
 
         {/* Step 1 — smart pre-prompt (professional pattern). */}
@@ -244,6 +251,12 @@ export function QrScanner({
         {phase === "starting" && (
           <p className="text-center text-sm text-fg-secondary">
             Starting camera… (allow access when your browser asks)
+          </p>
+        )}
+
+        {phase === "live" && (
+          <p className="text-center text-sm text-fg-secondary">
+            Point your camera at a wallet QR code.
           </p>
         )}
 
