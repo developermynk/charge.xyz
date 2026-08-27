@@ -117,30 +117,82 @@ export function QrScanner({
     const scanner = new Html5Qrcode("qr-reader-region");
     scannerRef.current = scanner;
 
-    scanner
-      .start(
+    const onScan = (decoded: string) => {
+      if (cancelled) return;
+      void stop();
+      onResult(decoded);
+      onClose();
+    };
+    const onErr = () => {
+      /* decode errors while scanning — ignore */
+    };
+
+    // Robust camera selection: try back camera, then any facing mode,
+    // then the explicit device list. `exact: "environment"` throws
+    // OverconstrainedError on many phones, so we MUST fall back instead
+    // of dying — that was the bug keeping the scanner broken everywhere.
+    (async () => {
+      const attempts: Array<string | MediaTrackConstraints> = [
         { facingMode: { exact: "environment" } },
-        { fps: 10, qrbox: { width: 240, height: 240 } },
-        (decoded) => {
-          if (cancelled) return;
-          void stop();
-          onResult(decoded);
-          onClose();
-        },
-        () => {
-          /* decode errors while scanning — ignore */
-        },
-      )
-      .then(() => {
-        if (!cancelled) setPhase("live");
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        startedRef.current = false;
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(diagnoseCameraError(msg));
-        setPhase("error");
-      });
+        { facingMode: "environment" },
+        { facingMode: "user" },
+      ];
+
+      for (const cfg of attempts) {
+        try {
+          await scanner.start(
+            cfg,
+            { fps: 10, qrbox: { width: 240, height: 240 } },
+            onScan,
+            onErr,
+          );
+          if (!cancelled) setPhase("live");
+          return;
+        } catch (e) {
+          await scanner.stop().catch(() => {});
+          try {
+            scanner.clear();
+          } catch {
+            /* ignore */
+          }
+          const m = (e instanceof Error ? e.message : String(e)).toLowerCase();
+          // constraint/device errors → try next camera config
+          if (/overconstrained|notfound|notreadable|nodet|not a cam/i.test(m)) {
+            continue;
+          }
+          // permission / insecure / other hard error → surface and stop
+          startedRef.current = false;
+          setError(diagnoseCameraError(m));
+          setPhase("error");
+          return;
+        }
+      }
+
+      // All facingMode attempts failed — enumerate devices and pick one.
+      try {
+        const cams = await Html5Qrcode.getCameras();
+        if (cams && cams.length > 0) {
+          const found = cams.find((c) => /back|rear|environment/i.test(c.label));
+          const back: { id: string; label: string } = found ?? cams[0]!;
+          await scanner.start(
+            back.id,
+            { fps: 10, qrbox: { width: 240, height: 240 } },
+            onScan,
+            onErr,
+          );
+          if (!cancelled) setPhase("live");
+          return;
+        }
+      } catch {
+        /* fall through to error */
+      }
+
+      startedRef.current = false;
+      setError(
+        "No camera is available on this device, or it is in use by another app. Enter the address manually below.",
+      );
+      setPhase("error");
+    })();
 
     return () => {
       cancelled = true;
