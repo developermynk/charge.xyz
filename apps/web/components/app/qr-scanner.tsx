@@ -13,16 +13,16 @@ import { Button, Modal } from "@charge/ui";
  *   1. A pre-prompt card explains WHY camera access is needed and shows an
  *      "Enable camera" button. We do NOT call getUserMedia until the user
  *      taps it, so the browser's native Allow/Deny appears in context.
- *   2. On tap we open the camera with the native getUserMedia API and decode
- *      frames with jsQR. This is far more reliable on mobile than
- *      html5-qrcode's auto-decode, which silently fails to match on many
- *      phones.
+ *   2. On tap we flip phase to "starting", which mounts the <video> element;
+ *      a useEffect (running AFTER that render) opens the camera with the
+ *      native getUserMedia API and decodes frames with jsQR.
  *
- * Lifecycle note (this was the previous bug): the decode loop must NOT be
- * torn down by React effect cleanup when we flip phase to "live". The loop
- * is guarded by `runningRef`, which is only cleared by `stop()` / unmount —
- * never by a phase transition — so decoding keeps running for the whole
- * session the modal is open.
+ * Lifecycle (the two bugs we have now nailed):
+ *   - The decode loop must NOT be torn down when we flip phase to "live".
+ *     It is guarded by `runningRef`, cleared only by stop()/unmount.
+ *   - The camera-open code MUST run after the <video> element exists, i.e.
+ *     inside a useEffect on phase === "starting" — never synchronously in the
+ *     click handler, where the element is not yet mounted.
  *
  * Privacy/security: no frames leave the browser. The stream is stopped the
  * moment the modal closes or a code is found.
@@ -105,10 +105,25 @@ export function QrScanner({
     };
   }, [open, stop]);
 
-  const startCamera = React.useCallback(async () => {
-    if (runningRef.current) return;
+  const startCamera = React.useCallback(() => {
     setError(null);
     setPhase("starting");
+  }, []);
+
+  // Open the camera AFTER the <video> element is mounted (phase === "starting"
+  // renders it). Guarded by runningRef so a successful start is never torn
+  // down by the phase transition to "live".
+  React.useEffect(() => {
+    if (phase !== "starting") return;
+    if (runningRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) {
+      setError("Scanner failed to initialize. Enter the address manually below.");
+      setPhase("error");
+      return;
+    }
 
     const secure =
       typeof window !== "undefined" &&
@@ -124,114 +139,119 @@ export function QrScanner({
       return;
     }
 
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) {
-      setError("Scanner failed to initialize. Enter the address manually below.");
-      setPhase("error");
-      return;
-    }
+    let openCancelled = false;
 
-    // Robust camera selection: exact back → any back → front.
-    const attempts: MediaTrackConstraints[] = [
-      { facingMode: { exact: "environment" } },
-      { facingMode: "environment" },
-      { facingMode: "user" },
-    ];
+    (async () => {
+      // Robust camera selection: exact back → any back → front.
+      const attempts: MediaTrackConstraints[] = [
+        { facingMode: { exact: "environment" } },
+        { facingMode: "environment" },
+        { facingMode: "user" },
+      ];
 
-    let stream: MediaStream | null = null;
-    let lastErr = "";
-    for (const cfg of attempts) {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: cfg });
-        break;
-      } catch (e) {
-        const m = e instanceof Error ? e.message : String(e);
-        lastErr = m;
-        const ml = m.toLowerCase();
-        if (/overconstrained|notfound|notreadable|nodet|not a cam/i.test(ml)) {
-          continue;
+      let stream: MediaStream | null = null;
+      let lastErr = "";
+      for (const cfg of attempts) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: cfg });
+          break;
+        } catch (e) {
+          const m = e instanceof Error ? e.message : String(e);
+          lastErr = m;
+          const ml = m.toLowerCase();
+          if (/overconstrained|notfound|notreadable|nodet|not a cam/i.test(ml)) {
+            continue;
+          }
+          if (openCancelled) return;
+          setError(diagnoseCameraError(ml));
+          setPhase("error");
+          return;
         }
-        setError(diagnoseCameraError(ml));
+      }
+
+      if (!stream) {
+        if (openCancelled) return;
+        setError(
+          lastErr
+            ? diagnoseCameraError(lastErr)
+            : "No camera is available on this device, or it is in use by another app. Enter the address manually below.",
+        );
         setPhase("error");
         return;
       }
-    }
 
-    if (!stream) {
-      setError(
-        lastErr
-          ? diagnoseCameraError(lastErr)
-          : "No camera is available on this device, or it is in use by another app. Enter the address manually below.",
-      );
-      setPhase("error");
-      return;
-    }
+      if (openCancelled) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
 
-    // At this point we own the stream. From here the loop is exclusively
-    // controlled by runningRef (set false only in stop()/unmount), so a
-    // phase change to "live" can never tear it down.
-    runningRef.current = true;
-    streamRef.current = stream;
-    video.srcObject = stream;
-    video.setAttribute("playsinline", "true");
-    video.muted = true;
+      // Stream is owned. From here the loop is exclusively controlled by
+      // runningRef (false only via stop()/unmount), so flipping phase to
+      // "live" below can never tear it down.
+      runningRef.current = true;
+      streamRef.current = stream;
+      video.srcObject = stream;
+      video.setAttribute("playsinline", "true");
+      video.muted = true;
 
-    try {
-      await video.play();
-    } catch {
-      /* some browsers need a tick; the loop checks readyState anyway */
-    }
+      try {
+        await video.play();
+      } catch {
+        /* some browsers need a tick; the loop checks readyState anyway */
+      }
 
-    setPhase("live");
+      setPhase("live");
 
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) {
-      setError("Scanner could not start. Enter the address manually below.");
-      stop();
-      setPhase("error");
-      return;
-    }
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) {
+        setError("Scanner could not start. Enter the address manually below.");
+        stop();
+        setPhase("error");
+        return;
+      }
 
-    const decode = () => {
-      if (!runningRef.current) return;
-      if (video.readyState >= 2 && video.videoWidth > 0) {
-        const w = video.videoWidth;
-        const h = video.videoHeight;
-        canvas.width = w;
-        canvas.height = h;
-        ctx.drawImage(video, 0, 0, w, h);
-        let data: ImageData | null = null;
-        try {
-          data = ctx.getImageData(0, 0, w, h);
-        } catch {
-          /* tainted frame — skip */
-        }
-        if (data) {
-          const found = jsQR(data.data, data.width, data.height);
-          if (found?.data) {
-            stop();
-            onResult(found.data);
-            onClose();
-            return;
+      const decode = () => {
+        if (!runningRef.current) return;
+        if (video.readyState >= 2 && video.videoWidth > 0) {
+          const w = video.videoWidth;
+          const h = video.videoHeight;
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(video, 0, 0, w, h);
+          let data: ImageData | null = null;
+          try {
+            data = ctx.getImageData(0, 0, w, h);
+          } catch {
+            /* tainted frame — skip */
+          }
+          if (data) {
+            const found = jsQR(data.data, data.width, data.height);
+            if (found?.data) {
+              stop();
+              onResult(found.data);
+              onClose();
+              return;
+            }
           }
         }
-      }
-      // Prefer requestVideoFrameCallback (fires exactly when a new frame is
-      // painted — most reliable on mobile); fall back to rAF.
-      const vfc = (
-        video as unknown as {
-          requestVideoFrameCallback?: (cb: () => void) => number;
+        const vfc = (
+          video as unknown as {
+            requestVideoFrameCallback?: (cb: () => void) => number;
+          }
+        ).requestVideoFrameCallback;
+        if (vfc) {
+          rvfcRef.current = vfc.call(video, decode);
+        } else {
+          rafRef.current = requestAnimationFrame(decode);
         }
-      ).requestVideoFrameCallback;
-      if (vfc) {
-        rvfcRef.current = vfc.call(video, decode);
-      } else {
-        rafRef.current = requestAnimationFrame(decode);
-      }
+      };
+      decode();
+    })();
+
+    return () => {
+      openCancelled = true;
     };
-    decode();
-  }, [onClose, onResult, stop]);
+  }, [phase, onClose, onResult, stop]);
 
   return (
     <Modal open={open} onClose={onClose} title="Scan a QR code">
@@ -259,7 +279,7 @@ export function QrScanner({
               Allow camera access to scan a wallet QR code. We only use it to
               read the code — the video stays on your device.
             </p>
-            <Button block size="lg" onClick={() => void startCamera()}>
+            <Button block size="lg" onClick={startCamera}>
               <Camera className="size-4" aria-hidden /> Enable camera
             </Button>
           </div>
@@ -281,7 +301,7 @@ export function QrScanner({
         {phase === "error" && (
           <div className="space-y-3">
             <p className="text-center text-sm text-danger">{error}</p>
-            <Button block variant="secondary" onClick={() => void startCamera()}>
+            <Button block variant="secondary" onClick={startCamera}>
               <RefreshCw className="size-4" aria-hidden /> Try camera again
             </Button>
             <div className="rounded-xl border border-fg/10 p-3">
