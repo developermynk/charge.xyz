@@ -40,7 +40,10 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            // camera=(self) is REQUIRED for the Send QR scanner (getUserMedia).
+            // Vercel/Next default of camera=() silently blocks the camera on
+            // every browser. mic/geolocation stay disabled — app doesn't use them.
+            value: "camera=(self), microphone=(), geolocation=()",
           },
         ],
       },
