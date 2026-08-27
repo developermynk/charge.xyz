@@ -7,13 +7,16 @@ import {
   Clock,
   ExternalLink,
   History as HistoryIcon,
+  RefreshCw,
+  Search,
   Waypoints,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
-import { formatUnits } from "viem";
+import { formatUnits, isAddress, type Hash } from "viem";
 
-import { Badge, Card, Skeleton, StatusLine } from "@charge/ui";
+import { Badge, Button, Card, Input, Skeleton, StatusLine } from "@charge/ui";
 import {
   ALL_CHAIN_IDS,
   EVM_CHAIN_BY_ID,
@@ -35,40 +38,67 @@ interface Row {
   summary: string;
 }
 
+const POLL_MS = 20_000;
+
 export default function HistoryPage() {
   const { address } = useWallet();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [type, setType] = React.useState<FilterType>("all");
   const [chain, setChain] = React.useState<FilterChain>("all");
 
-  // In-app records (instant, includes swaps/bridges the user submitted here).
+  // Address being viewed: URL ?addr= wins, else the connected wallet.
+  const [addrInput, setAddrInput] = React.useState<string>(
+    searchParams.get("addr") ?? "",
+  );
+  const viewAddress = (addrInput || address || "") as `0x${string}` | "";
+  const isOwn = !!address && viewAddress.toLowerCase() === address.toLowerCase();
+
+  // Real-time: poll on an interval + a manual refresh key + window focus.
+  const [refreshKey, setRefreshKey] = React.useState(0);
+  const [lastUpdated, setLastUpdated] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    const id = setInterval(() => setRefreshKey((k) => k + 1), POLL_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  // In-app records (only meaningful for the connected wallet).
   const [local, setLocal] = React.useState<ReturnType<typeof getTxHistory>>([]);
   React.useEffect(() => {
+    if (!isOwn) {
+      setLocal([]);
+      return;
+    }
     setLocal(getTxHistory(address));
-    // Refresh when the tab regains focus (a tx may have completed elsewhere).
     const onFocus = () => setLocal(getTxHistory(address));
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [address]);
+  }, [address, isOwn]);
 
   // Real on-chain history from each chain's explorer (keyless Blockscout).
   const [explorer, setExplorer] = React.useState<ExplorerTx[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [explorerDown, setExplorerDown] = React.useState(false);
+  const [addrError, setAddrError] = React.useState(false);
 
   const chainsToScan = chain === "all" ? ALL_CHAIN_IDS : [chain];
 
   React.useEffect(() => {
-    if (!address) {
+    if (!viewAddress || !isAddress(viewAddress)) {
       setExplorer([]);
+      setAddrError(!!viewAddress);
       return;
     }
+    setAddrError(false);
     let cancelled = false;
     setIsLoading(true);
-    fetchChainHistory(address)
+    fetchChainHistory(viewAddress)
       .then((txs) => {
         if (cancelled) return;
         setExplorer(txs);
         setExplorerDown(txs.length === 0);
+        setLastUpdated(Date.now());
       })
       .catch(() => {
         if (!cancelled) setExplorerDown(true);
@@ -79,7 +109,7 @@ export default function HistoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [address, chainsToScan.join(",")]);
+  }, [viewAddress, chainsToScan.join(","), refreshKey]);
 
   const rows = React.useMemo<Row[]>(() => {
     const out: Row[] = [];
@@ -115,7 +145,8 @@ export default function HistoryPage() {
       .sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0));
   }, [local, explorer, type, chain, chainsToScan]);
 
-  const anyRpcDown = explorerDown;
+  const anyDown = explorerDown;
+  const short = viewAddress.slice(0, 6) + "…" + viewAddress.slice(-4);
 
   return (
     <div className="space-y-6">
@@ -127,11 +158,81 @@ export default function HistoryPage() {
             bridges, sends and receives.
           </p>
         </div>
-        <Badge tone="neutral" className="gap-1.5">
-          <HistoryIcon className="size-3" aria-hidden />
-          {rows.length} shown
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge tone="charge" className="gap-1.5">
+            <span className="size-1.5 animate-pulse rounded-full bg-charge" />
+            Live
+          </Badge>
+          <Badge tone="neutral" className="gap-1.5">
+            <HistoryIcon className="size-3" aria-hidden />
+            {rows.length} shown
+          </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setRefreshKey((k) => k + 1)}
+            className="gap-1.5"
+          >
+            <RefreshCw className="size-3.5" aria-hidden />
+            Refresh
+          </Button>
+        </div>
       </header>
+
+      {/* Address bar — view any address, or your connected wallet. */}
+      <form
+        className="flex flex-wrap items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const params = new URLSearchParams(searchParams.toString());
+          if (addrInput.trim()) params.set("addr", addrInput.trim());
+          else params.delete("addr");
+          router.replace(`/app/history?${params.toString()}`, { scroll: false });
+        }}
+      >
+        <div className="relative flex-1 min-w-[260px]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-tertiary" />
+          <Input
+            value={addrInput}
+            onChange={(e) => setAddrInput(e.target.value)}
+            placeholder={address ?? "Paste any 0x address"}
+            className="pl-9 font-mono text-xs"
+            aria-label="Address to view"
+          />
+        </div>
+        <Button type="submit" size="sm" variant="secondary">
+          View
+        </Button>
+        {address && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setAddrInput("");
+              router.replace("/app/history", { scroll: false });
+            }}
+          >
+            My wallet
+          </Button>
+        )}
+        {addrError && (
+          <span className="text-xs text-danger">Invalid address</span>
+        )}
+      </form>
+      {viewAddress && !addrError && (
+        <p className="text-xs text-fg-tertiary">
+          Viewing{" "}
+          <span className="font-mono text-fg-secondary">{short}</span>
+          {isOwn ? " (your wallet)" : ""}
+          {lastUpdated && (
+            <>
+              {" · updated "}
+              {Math.max(0, Math.round((Date.now() - lastUpdated) / 1000))}s ago
+            </>
+          )}
+        </p>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
@@ -184,13 +285,13 @@ export default function HistoryPage() {
         ))}
       </div>
 
-      {!address ? (
+      {!viewAddress ? (
         <StatusLine tone="info">
-          Connect a wallet to see your transaction history.
+          Connect a wallet or paste an address to see transaction history.
         </StatusLine>
       ) : (
         <Card className="divide-y divide-fg/[0.06] overflow-hidden">
-          {isLoading && local.length === 0 && explorer.length === 0 ? (
+          {isLoading && rows.length === 0 ? (
             <div className="space-y-3 p-4">
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
@@ -205,7 +306,7 @@ export default function HistoryPage() {
         </Card>
       )}
 
-      {anyRpcDown && (
+      {anyDown && (
         <p className="text-xs text-fg-tertiary">
           Some chains&apos; on-chain history is unavailable (explorer API
           unreachable). In-app swap/bridge/send records are always shown.
