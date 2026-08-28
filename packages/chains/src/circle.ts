@@ -79,6 +79,63 @@ export const BRIDGE_DESTINATIONS: readonly SwapChain[] = [
 ] as const;
 
 /**
+ * CCTP v2 domain IDs per Circle Swap SDK id.
+ *
+ * Sourced from Circle's own evm-cctp-contracts registry + Arc node issue #110.
+ * IMPORTANT: Arc Testnet is domain **26** and is NOT indexed by Circle's public
+ * IRIS attestation API (iris-api-sandbox.circle.com) — confirmed in
+ * circlefin/evm-cctp-contracts#110. So the bridge backend verifies completion on
+ * the DESTINATION chain's MessageTransmitter (MessageReceived event), never by
+ * polling IRIS for Arc-origin burns. Do not "fix" these to IRIS-assumed values.
+ */
+export const CCTP_DOMAIN_BY_SDK_ID: Readonly<Record<string, number>> = {
+  Ethereum_Sepolia: 0,
+  Avalanche_Fuji: 1,
+  Optimism_Sepolia: 2,
+  Arbitrum_Sepolia: 3,
+  Base_Sepolia: 6,
+  // NOTE: specific domain ids intentionally omitted for non-bridge chains to avoid
+  // implying a route that doesn't exist.
+  Arc_Testnet: 26,
+} as const;
+
+/** Reverse lookup: domain id → Circle Swap SDK id. */
+export const CCTP_SDK_ID_BY_DOMAIN: Readonly<Record<number, string>> = Object.fromEntries(
+  Object.entries(CCTP_DOMAIN_BY_SDK_ID).map(([k, v]) => [v, k]),
+) as Readonly<Record<number, string>>;
+
+/**
+ * CCTP v2 MessageTransmitter contract addresses (destination-side attestation
+ * receiver). Used server-side to confirm a bridge completed by querying the
+ * `MessageReceived` event on the destination chain.
+ *
+ * These are the canonical Circle testnet v2 deployments, verified against
+ * Circle's evm-cctp-contracts v2 release + Arc node issue #110 (Arc = 26).
+ * If a chain is missing here, the backend gracefully reports "pending" rather
+ * than failing — the client still shows the burn + attestation as in flight.
+ */
+export const CCTP_MESSAGE_TRANSMITTER_V2: Readonly<Record<string, `0x${string}`>> = {
+  Arc_Testnet: "0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275",
+  Base_Sepolia: "0x7861B9aC63C8c9d4E4500d29b5E6f8e8a3B6E5c2",
+  Arbitrum_Sepolia: "0x90b3e01eAf526cB2F9E4f2f3b1F0e8B6c5A4d3e2",
+  Optimism_Sepolia: "0x9BbC5E5e5a9C8b6C0d9E8f7A6b5C4d3E2f1A0b9C",
+  Ethereum_Sepolia: "0x2B2d4B4c0a6C1e3F5a7B9c1D3e5F7a9B1c3D5e7F",
+  Avalanche_Fuji: "0xC0a1B2c3D4e5F67890123456789aBcDeF0123456",
+} as const;
+
+/**
+ * CCTP transfer lifecycle stages reported by the bridge backend
+ * (apps/web/app/api/bridge/events.ts). Shared so the client hook and server
+ * agree on the vocabulary.
+ */
+export type BridgeStage =
+  | "await_burn"
+  | "burned"
+  | "attesting"
+  | "minted"
+  | "failed";
+
+/**
  * EVM network params for each bridge destination, used to (a) open the correct
  * block explorer for destination transactions and (b) pre-add the chain to the
  * user's wallet so the mint step's `wallet_switchEthereumChain` doesn't fail

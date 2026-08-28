@@ -62,25 +62,17 @@ function PrivyEnabled({ children }: { children: React.ReactNode }) {
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { wallets } = useWallets();
 
-  // Force a fresh sign-in on every full page load. Privy auto-restores the
-  // embedded-wallet session, so the app would otherwise open "already
-  // connected" to the previous account on every browser/tab open. Clear the
-  // restored session once on mount; the root layout stays mounted during SPA
-  // navigation, so this only runs on a real open/reload. Until cleared we
-  // report as not-authenticated to avoid a flash of the connected state.
+  // Persist the Privy session across reloads / new tabs. Privy auto-restores
+  // the embedded-wallet session from storage; we surface it as connected once
+  // the provider is ready. (An earlier forced logout-on-mount is what made the
+  // "Sign in to continue" gate reappear on every page load.)
   const [sessionCleared, setSessionCleared] = React.useState(false);
   const didReset = React.useRef(false);
   React.useEffect(() => {
     if (didReset.current) return;
     didReset.current = true;
-    if (authenticated) {
-      logout()
-        .catch(() => {})
-        .finally(() => setSessionCleared(true));
-    } else {
-      setSessionCleared(true);
-    }
-  }, [authenticated, logout]);
+    setSessionCleared(true);
+  }, []);
 
   const live = sessionCleared && authenticated;
 
@@ -131,7 +123,7 @@ function PrivyEnabled({ children }: { children: React.ReactNode }) {
       switchChain,
       getProvider,
     }),
-    [address, chainId, ready, login, logout, switchToArc, switchChain, getProvider],
+    [address, chainId, ready, sessionCleared, login, logout, switchToArc, switchChain, getProvider],
   );
 
   return (

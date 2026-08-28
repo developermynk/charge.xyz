@@ -5,12 +5,13 @@ import { Card } from "@charge/ui";
 
 import { BackButton } from "@/components/app/back-button";
 import { SwapPanel } from "@/components/app/swap-panel";
+import { PageEnter } from "@/components/motion";
 
 export const metadata: Metadata = { title: "Swap" };
 
 export default function SwapPage() {
   return (
-    <div className="space-y-6">
+    <PageEnter className="space-y-6">
       <BackButton />
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Swap</h1>
@@ -24,6 +25,6 @@ export default function SwapPage() {
           <SwapPanel />
         </Suspense>
       </Card>
-    </div>
+    </PageEnter>
   );
 }

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Card } from "@charge/ui";
 import { EVM_CHAIN_BY_ID, ARC_CHAIN_ID } from "@charge/chains";
 import { ChainSelect } from "@/components/app/chain-select";
+import { PageEnter } from "@/components/motion";
 
 import { SEED_TOKENS, type MarketToken } from "@/lib/market-data";
 
@@ -105,7 +106,7 @@ export default function MarketPage() {
         : all.filter((t) => watch.includes(t.id));
 
   return (
-    <div className="space-y-6">
+    <PageEnter className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Market</h1>
         <p className="mt-1 text-fg-secondary">
@@ -156,7 +157,7 @@ export default function MarketPage() {
           ))
         )}
       </Card>
-    </div>
+    </PageEnter>
   );
 }
 

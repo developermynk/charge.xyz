@@ -9,6 +9,7 @@ import { useWallet, useChainBalance } from "@charge/web3";
 import { ALL_CHAIN_IDS, EVM_CHAIN_BY_ID, ARC_CHAIN_ID } from "@charge/chains";
 
 import { ChainSelect } from "@/components/app/chain-select";
+import { Stagger, StaggerItem, MotionCard, HoverDepth } from "@/components/motion";
 
 export default function OverviewPage() {
   const { address } = useWallet();
@@ -43,15 +44,29 @@ export default function OverviewPage() {
         <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-fg-tertiary">
           Quick actions
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <ActionTile href="/app/swap" icon={<Waypoints className="size-5" />} title="Swap" body="Trade across chains" />
-          <ActionTile href="/app/bridge" icon={<Layers className="size-5" />} title="Bridge" body="Move USDC via CCTP" />
-          <ActionTile href="/app/send" icon={<Send className="size-5" />} title="Send" body="Transfer to any address" />
-          <ActionTile href="/app/receive" icon={<Network className="size-5" />} title="Receive" body="Your address as QR" />
-          <ActionTile href="/app/history" icon={<History className="size-5" />} title="History" body="All swaps, bridges & sends" />
-          <ActionTile href="/app/market" icon={<TrendingUp className="size-5" />} title="Market" body="Trending & launches" />
-          <ActionTile href="/app/create" icon={<Coins className="size-5" />} title="Launch token" body="Deploy a fixed supply" />
-        </div>
+        <Stagger className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <StaggerItem>
+            <ActionTile href="/app/swap" icon={<Waypoints className="size-5" />} title="Swap" body="Trade across chains" />
+          </StaggerItem>
+          <StaggerItem>
+            <ActionTile href="/app/bridge" icon={<Layers className="size-5" />} title="Bridge" body="Move USDC via CCTP" />
+          </StaggerItem>
+          <StaggerItem>
+            <ActionTile href="/app/send" icon={<Send className="size-5" />} title="Send" body="Transfer to any address" />
+          </StaggerItem>
+          <StaggerItem>
+            <ActionTile href="/app/receive" icon={<Network className="size-5" />} title="Receive" body="Your address as QR" />
+          </StaggerItem>
+          <StaggerItem>
+            <ActionTile href="/app/history" icon={<History className="size-5" />} title="History" body="All swaps, bridges & sends" />
+          </StaggerItem>
+          <StaggerItem>
+            <ActionTile href="/app/market" icon={<TrendingUp className="size-5" />} title="Market" body="Trending & launches" />
+          </StaggerItem>
+          <StaggerItem>
+            <ActionTile href="/app/create" icon={<Coins className="size-5" />} title="Launch token" body="Deploy a fixed supply" />
+          </StaggerItem>
+        </Stagger>
       </section>
     </div>
   );
@@ -74,34 +89,36 @@ function ChainRow({
   const bal = useChainBalance({ chainId, address, usdcAddress });
 
   return (
-    <Link
-      href={`/app/chain/${chainId}`}
-      className="flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-fg/[0.03]"
-    >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-fg/[0.06] text-fg-secondary">
-        <Fuel className="size-4" aria-hidden />
-      </span>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-medium text-fg">
-            {def?.name ?? `Chain ${chainId}`}
-          </p>
-          {isArc && <Badge tone="charge" className="text-[11px]">USDC gas</Badge>}
-        </div>
-        <p className="text-xs text-fg-tertiary">{def?.nativeSymbol} native</p>
-      </div>
-
-      {bal.isLoading ? (
-        <Skeleton className="h-5 w-28" />
-      ) : bal.rpcError ? (
-        <span className="text-sm tabular-nums text-fg-tertiary">—</span>
-      ) : (
-        <span className="text-sm font-medium tabular-nums text-fg">
-          {formatAmount(bal.nativeFormatted)} {bal.nativeSymbol}
+    <HoverDepth className="rounded-xl">
+      <Link
+        href={`/app/chain/${chainId}`}
+        className="flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-fg/[0.03]"
+      >
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-fg/[0.06] text-fg-secondary">
+          <Fuel className="size-4" aria-hidden />
         </span>
-      )}
-    </Link>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-medium text-fg">
+              {def?.name ?? `Chain ${chainId}`}
+            </p>
+            {isArc && <Badge tone="charge" className="text-[11px]">USDC gas</Badge>}
+          </div>
+          <p className="text-xs text-fg-tertiary">{def?.nativeSymbol} native</p>
+        </div>
+
+        {bal.isLoading ? (
+          <Skeleton className="h-5 w-28" />
+        ) : bal.rpcError ? (
+          <span className="text-sm tabular-nums text-fg-tertiary">—</span>
+        ) : (
+          <span className="text-sm font-medium tabular-nums text-fg">
+            {formatAmount(bal.nativeFormatted)} {bal.nativeSymbol}
+          </span>
+        )}
+      </Link>
+    </HoverDepth>
   );
 }
 
@@ -117,16 +134,18 @@ function ActionTile({
   body: string;
 }) {
   return (
-    <Link href={href} className="group">
-      <Card className="flex items-center gap-4 p-4 transition-all duration-200 hover:border-fg/20 hover:bg-fg/[0.05]">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-fg/[0.06] text-fg-secondary transition-colors group-hover:text-fg">
-          {icon}
-        </span>
-        <span className="min-w-0">
-          <span className="block font-medium text-fg">{title}</span>
-          <span className="block text-sm text-fg-secondary">{body}</span>
-        </span>
-      </Card>
+    <Link href={href} className="group block">
+      <MotionCard className="h-full">
+        <Card className="flex h-full items-center gap-4 bg-transparent p-4 transition-colors duration-200 group-hover:border-fg/20 group-hover:bg-fg/[0.05]">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-fg/[0.06] text-fg-secondary transition-colors group-hover:text-fg">
+            {icon}
+          </span>
+          <span className="min-w-0">
+            <span className="block font-medium text-fg">{title}</span>
+            <span className="block text-sm text-fg-secondary">{body}</span>
+          </span>
+        </Card>
+      </MotionCard>
     </Link>
   );
 }

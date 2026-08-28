@@ -4,12 +4,13 @@ import { Card } from "@charge/ui";
 
 import { BackButton } from "@/components/app/back-button";
 import { SendPanel } from "@/components/app/send-panel";
+import { PageEnter } from "@/components/motion";
 
 export const metadata: Metadata = { title: "Send" };
 
 export default function SendPage() {
   return (
-    <div className="space-y-6">
+    <PageEnter className="space-y-6">
       <BackButton />
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
@@ -21,6 +22,6 @@ export default function SendPage() {
       <Card className="p-6 sm:p-8">
         <SendPanel />
       </Card>
-    </div>
+    </PageEnter>
   );
 }

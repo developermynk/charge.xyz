@@ -10,6 +10,7 @@ import { useWallet } from "@charge/web3";
 import { EVM_CHAIN_BY_ID, ALL_CHAIN_IDS } from "@charge/chains";
 
 import { BackButton } from "@/components/app/back-button";
+import { PageEnter } from "@/components/motion";
 
 export default function ReceivePage() {
   const { address, method } = useWallet();
@@ -29,7 +30,7 @@ export default function ReceivePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <PageEnter className="space-y-6">
       <BackButton />
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Receive</h1>
@@ -84,6 +85,6 @@ export default function ReceivePage() {
           </div>
         </Card>
       )}
-    </div>
+    </PageEnter>
   );
 }

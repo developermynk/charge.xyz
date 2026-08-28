@@ -34,7 +34,7 @@ import {
   type BridgeStageId,
   type BridgeStepInfo,
 } from "@charge/sdk";
-import { useWallet, useChainBalance } from "@charge/web3";
+import { useWallet, useChainBalance, useBridgeStatus } from "@charge/web3";
 import { ChainIcon } from "@/components/app/token-icon";
 
 type Phase = "idle" | "running" | "done" | "error";
@@ -76,6 +76,8 @@ export function BridgePanel() {
     null,
   );
   const [steps, setSteps] = React.useState<BridgeStepInfo[]>([]);
+
+  const { status: bridgeStatus } = useBridgeStatus(txHash);
 
   // Source-chain USDC balance (generic — works for any chain, not just Arc).
   const fromNumeric = swapChainNumericId(fromChain);
@@ -418,6 +420,27 @@ export function BridgePanel() {
       )}
 
       {error && <StatusLine tone="danger">{error}</StatusLine>}
+
+      {bridgeStatus && (bridgeStatus.stage === "burned" || bridgeStatus.stage === "attesting" || bridgeStatus.stage === "minted") && (
+        <StatusLine tone={bridgeStatus.stage === "minted" ? "success" : undefined}>
+          {bridgeStatus.stage === "burned" && "Burn confirmed. Circle is attesting — your USDC will mint on " + chainName(toChain) + " shortly."}
+          {bridgeStatus.stage === "attesting" && "Attestation in flight — waiting on destination-chain finality. Keep this tab open."}
+          {bridgeStatus.stage === "minted" && bridgeStatus.destinationTxHash ? (
+            <>
+              Mint confirmed on {chainName(toChain)}.{" "}
+              <a
+                href={`${bridgeExplorer(toChain) ?? "https://sepolia.basescan.org"}/tx/${bridgeStatus.destinationTxHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 underline underline-offset-2"
+              >
+                View destination transaction
+                <ExternalLink className="size-3" aria-hidden />
+              </a>
+            </>
+          ) : bridgeStatus.stage === "minted" ? "Mint confirmed on " + chainName(toChain) + "." : null}
+        </StatusLine>
+      )}
 
       {phase === "done" && (
         <StatusLine tone="success">

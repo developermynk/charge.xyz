@@ -1,5 +1,10 @@
 "use client";
 
+// History is fully client-side (Privy auth, live explorer polling, search
+// params). Opt out of static prerender so useSearchParams() doesn't trip the
+// Next 16 CSR-bailout during `next build`.
+export const dynamic = "force-dynamic";
+
 import {
   ArrowDownLeft,
   ArrowLeftRight,
@@ -23,6 +28,7 @@ import {
 } from "@charge/chains";
 import { getTxHistory, type TxType } from "@charge/sdk";
 import { useWallet, fetchChainHistory, type ExplorerTx } from "@charge/web3";
+import { PageEnter } from "@/components/motion";
 
 import { ChainIcon } from "@/components/app/token-icon";
 
@@ -149,7 +155,7 @@ export default function HistoryPage() {
   const short = viewAddress.slice(0, 6) + "…" + viewAddress.slice(-4);
 
   return (
-    <div className="space-y-6">
+    <PageEnter className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">History</h1>
@@ -312,7 +318,7 @@ export default function HistoryPage() {
           unreachable). In-app swap/bridge/send records are always shown.
         </p>
       )}
-    </div>
+    </PageEnter>
   );
 }
 

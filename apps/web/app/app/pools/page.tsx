@@ -3,12 +3,13 @@ import { Suspense } from "react";
 
 import { BackButton } from "@/components/app/back-button";
 import { PoolList } from "@/components/app/pool-list";
+import { PageEnter } from "@/components/motion";
 
 export const metadata: Metadata = { title: "Pools" };
 
 export default function PoolsPage() {
   return (
-    <div className="space-y-6">
+    <PageEnter className="space-y-6">
       <BackButton />
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Liquidity</h1>
@@ -22,6 +23,6 @@ export default function PoolsPage() {
       <Suspense fallback={<p className="text-fg-tertiary">Loading…</p>}>
         <PoolList />
       </Suspense>
-    </div>
+    </PageEnter>
   );
 }

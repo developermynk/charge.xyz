@@ -50,3 +50,4 @@ export {
   fetchChainHistory,
   type ExplorerTx,
 } from "./use-explorer-history.ts";
+export { useBridgeStatus, type BridgeStatus } from "./use-bridge-status.ts";
